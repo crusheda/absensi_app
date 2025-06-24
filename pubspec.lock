@@ -57,6 +57,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.6"
+  css_colors:
+    dependency: "direct main"
+    description:
+      name: css_colors
+      sha256: c6778087183988fbdbc24acb9a7c8cdd0568ccb896400c8ca9d807a58d3da3f8
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.7"
   cupertino_icons:
     dependency: "direct main"
     description:
