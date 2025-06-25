@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // Ganti sesuai URL API Laravel kamu
-  static const String baseUrl = "http://192.168.254.80:8000/api";
+  static const String baseUrl = "http://192.168.1.35:8000/api";
 
   /// Kirim absensi dengan foto dan lokasi
   static Future<String> kirimAbsensi({

@@ -1,8 +1,14 @@
+// Final Absensi Page dengan desain kotak seperti pada gambar terakhir
+import 'dart:async';
 import 'dart:io';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
-import '../services/api_service.dart';
+import 'package:intl/intl.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter/services.dart';
 
 class AbsensiPage extends StatefulWidget {
   final String nip;
@@ -13,9 +19,73 @@ class AbsensiPage extends StatefulWidget {
 }
 
 class _AbsensiPageState extends State<AbsensiPage> {
+  static const kantorPos = LatLng(-7.5104256, 110.5887232);
+  static const radiusKantorMeter = 100.0;
+
+  Position? _position;
+  StreamSubscription<Position>? _positionStream;
   File? _imageFile;
-  Position? _currentPosition;
-  bool _isLoading = false;
+  late Timer _timer;
+  String _currentTime = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _startLocationStream();
+    _updateTime();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _updateTime());
+  }
+
+  void _updateTime() {
+    final now = DateTime.now();
+    final formatted = DateFormat(
+      'EEEE, d MMM yyyy\nHH:mm:ss WIB',
+      'id_ID',
+    ).format(now);
+    if (mounted) setState(() => _currentTime = formatted);
+  }
+
+  void _startLocationStream() async {
+    if (_positionStream != null) return; // <-- Tambahkan ini
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.deniedForever ||
+        permission == LocationPermission.denied)
+      return;
+
+    _positionStream =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.best,
+            distanceFilter: 1,
+          ),
+        ).listen((pos) {
+          if (mounted) setState(() => _position = pos);
+        });
+  }
+
+  @override
+  void dispose() {
+    _positionStream?.cancel();
+    _timer.cancel();
+    super.dispose();
+  }
+
+  double _calculateJarak() {
+    if (_position == null ||
+        (_position!.latitude == 0 && _position!.longitude == 0)) {
+      return 0;
+    }
+    return Geolocator.distanceBetween(
+      _position!.latitude,
+      _position!.longitude,
+      kantorPos.latitude,
+      kantorPos.longitude,
+    );
+  }
 
   Future<void> _ambilFoto() async {
     final picker = ImagePicker();
@@ -25,86 +95,261 @@ class _AbsensiPageState extends State<AbsensiPage> {
     }
   }
 
-  Future<void> _ambilLokasi() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      return;
-    }
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return;
-      }
-    }
-    _currentPosition = await Geolocator.getCurrentPosition();
-  }
-
-  Future<void> _kirimAbsensi(String jenis) async {
-    if (_imageFile == null || _currentPosition == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Foto dan lokasi harus diambil dulu.')),
-      );
-      return;
-    }
-    setState(() => _isLoading = true);
-
-    final message = await ApiService.kirimAbsensi(
-      nip: widget.nip,
-      imageFile: _imageFile!,
-      latitude: _currentPosition!.latitude,
-      longitude: _currentPosition!.longitude,
-      jenis: jenis,
-    );
-
-    setState(() => _isLoading = false);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Absensi')),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            ElevatedButton(
-              onPressed: _ambilFoto,
-              child: const Text("Ambil Foto"),
-            ),
-            if (_imageFile != null) Image.file(_imageFile!, height: 200),
-
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: _ambilLokasi,
-              child: const Text("Ambil Lokasi"),
-            ),
-            if (_currentPosition != null)
-              Text(
-                "Lat: ${_currentPosition!.latitude}, Lng: ${_currentPosition!.longitude}",
-              ),
-
-            const SizedBox(height: 20),
-            if (_isLoading)
-              const CircularProgressIndicator()
-            else
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    final distance = _calculateJarak();
+    final insideRadius = distance <= radiusKantorMeter;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+      ),
+      child: CupertinoPageScaffold(
+        child: SafeArea(
+          top: false,
+          bottom: false,
+          child: Stack(
+            children: [
+              FlutterMap(
+                options: MapOptions(
+                  center: _position != null
+                      ? LatLng(_position!.latitude, _position!.longitude)
+                      : kantorPos,
+                  zoom: 18,
+                  interactiveFlags:
+                      InteractiveFlag.pinchZoom | InteractiveFlag.drag,
+                ),
                 children: [
-                  ElevatedButton(
-                    onPressed: () => _kirimAbsensi("masuk"),
-                    child: const Text("Absen Masuk"),
+                  TileLayer(
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.example.absensi',
                   ),
-                  ElevatedButton(
-                    onPressed: () => _kirimAbsensi("pulang"),
-                    child: const Text("Absen Pulang"),
+                  CircleLayer(
+                    circles: [
+                      CircleMarker(
+                        point: kantorPos,
+                        color: Colors.blue.withOpacity(0.2),
+                        borderStrokeWidth: 2,
+                        borderColor: Colors.blue,
+                        radius: radiusKantorMeter,
+                      ),
+                    ],
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      if (_position != null)
+                        Marker(
+                          width: 200,
+                          height: 80,
+                          point: LatLng(
+                            _position!.latitude,
+                            _position!.longitude,
+                          ),
+                          child: Column(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.7),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '${distance.toStringAsFixed(1)} m',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                              const Icon(
+                                Icons.location_pin,
+                                color: Colors.red,
+                                size: 40,
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ),
-          ],
+
+              // Floating Panel
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Panel Informasi
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black26, blurRadius: 6),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(CupertinoIcons.location, size: 18),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: _position == null
+                                    ? Row(
+                                        children: const [
+                                          CupertinoActivityIndicator(
+                                            radius: 10,
+                                          ),
+                                          SizedBox(width: 8),
+                                          Text("Sedang mendeteksi lokasi..."),
+                                        ],
+                                      )
+                                    : Text(() {
+                                        if (distance > 10000) {
+                                          return "Anda berada Jauh dari Radius Kantor (> 10km)";
+                                        } else if (insideRadius) {
+                                          return "Anda berada di Dalam Radius Kantor.";
+                                        } else {
+                                          return "Anda berada ${distance.toStringAsFixed(0)}m di Luar Radius Kantor.";
+                                        }
+                                      }(), style: const TextStyle(fontSize: 14)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(CupertinoIcons.scope, size: 18),
+                              const SizedBox(width: 6),
+                              Text(
+                                _position != null
+                                    ? "Akurat sejauh ${_position!.accuracy.toStringAsFixed(0)} m"
+                                    : "-",
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 20),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: const [
+                                  Text(
+                                    "Jadwal Reguler",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text("08:00 - 15:00 WIB"),
+                                  Text(
+                                    "pagi kantor (pk)",
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    _currentTime.split('\n').first,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  Text(
+                                    _currentTime.split('\n').last,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Panel Tombol
+                    Container(
+                      margin: const EdgeInsets.only(
+                        left: 16,
+                        right: 16,
+                        bottom: 16,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black26, blurRadius: 6),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: CupertinoButton(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              color: Colors.redAccent,
+                              borderRadius: BorderRadius.circular(10),
+                              onPressed: () => _ambilFoto(),
+                              child: const Text(
+                                "PULANG",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: CupertinoButton(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              color: Colors.amber,
+                              borderRadius: BorderRadius.circular(10),
+                              onPressed: () => _ambilFoto(),
+                              child: const Text(
+                                "IJIN",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: CupertinoButton(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              color: Colors.blueAccent,
+                              borderRadius: BorderRadius.circular(10),
+                              onPressed: () => _ambilFoto(),
+                              child: const Text(
+                                "BERANGKAT",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

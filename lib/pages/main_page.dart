@@ -28,7 +28,13 @@ class _MainPageState extends State<MainPage> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      DashboardPage(nip: widget.nip),
+      DashboardPage(
+        name: widget.name,
+        nama: widget.nama,
+        nip: widget.nip,
+        fotoProfil: widget.fotoProfil,
+      ),
+      RekapPage(nip: widget.nip),
       AbsensiPage(nip: widget.nip),
       RekapPage(nip: widget.nip),
       SettingPage(
@@ -50,6 +56,10 @@ class _MainPageState extends State<MainPage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),
             label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.work_history),
+            label: 'Aktivitas',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.camera_alt),
