@@ -5,8 +5,18 @@ import 'rekap_page.dart';
 import 'setting_page.dart';
 
 class MainPage extends StatefulWidget {
+  final String name;
+  final String nama;
   final String nip;
-  const MainPage({super.key, required this.nip});
+  final String fotoProfil;
+
+  const MainPage({
+    super.key,
+    required this.name,
+    required this.nama,
+    required this.nip,
+    required this.fotoProfil,
+  });
 
   @override
   State<MainPage> createState() => _MainPageState();
@@ -21,7 +31,12 @@ class _MainPageState extends State<MainPage> {
       DashboardPage(nip: widget.nip),
       AbsensiPage(nip: widget.nip),
       RekapPage(nip: widget.nip),
-      const SettingPage(),
+      SettingPage(
+        name: widget.name,
+        nama: widget.nama,
+        nip: widget.nip,
+        fotoProfil: widget.fotoProfil,
+      ),
     ];
 
     return Scaffold(
