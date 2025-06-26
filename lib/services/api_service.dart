@@ -5,11 +5,42 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // Ganti sesuai URL API Laravel kamu
-  // static const String baseUrl = "http://192.168.1.35:8000/api";
-  static const String baseUrl = "http://192.168.254.80:8000/api";
+  // static const String baseUrl = "http://192.168.254.80:8000/api";
+  static const String baseUrl = "http://192.168.1.35:8000/api";
+  static const String simrsUrl = "https://simrsmu.com";
+
+  static Future<Map<String, dynamic>> cekValidasiTombol({
+    required int id_user,
+    required double latitude,
+    required double longitude,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/validasi'),
+      body: {
+        'id_user': id_user.toString(),
+        'latitude': latitude.toString(),
+        'longitude': longitude.toString(),
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return {
+        'berangkat': data['berangkat'] ?? false,
+        'pulang': data['pulang'] ?? false,
+        'ijin': data['ijin'] ?? false,
+        'nama': data['nama'] ?? '-',
+        'jam': data['jam'] ?? '-',
+        'keterangan': data['keterangan'] ?? '-',
+        'message': data['message'] ?? '',
+      };
+    } else {
+      throw Exception('Gagal memvalidasi tombol');
+    }
+  }
 
   /// Kirim absensi dengan foto dan lokasi
-  static Future<String> kirimAbsensi({
+  static Future<Map<String, dynamic>> kirimAbsensi({
     required String id_user,
     required String nip,
     required File imageFile,
@@ -20,6 +51,7 @@ class ApiService {
     final uri = Uri.parse('$baseUrl/absensi');
 
     var request = http.MultipartRequest('POST', uri)
+      ..headers['Accept'] = 'application/json'
       ..fields['id_user'] = id_user
       ..fields['nip'] = nip
       ..fields['latitude'] = latitude.toString()
@@ -27,18 +59,11 @@ class ApiService {
       ..fields['jenis'] = jenis
       ..files.add(await http.MultipartFile.fromPath('foto', imageFile.path));
 
-    try {
-      var response = await request.send();
-      if (response.statusCode == 200) {
-        final respStr = await response.stream.bytesToString();
-        final data = jsonDecode(respStr);
-        return data['message'] ?? 'Berhasil';
-      } else {
-        return 'Gagal absen: ${response.statusCode}';
-      }
-    } catch (e) {
-      return 'Terjadi kesalahan saat mengirim absensi';
-    }
+    var response = await request.send();
+    final respStr = await response.stream.bytesToString();
+    final data = jsonDecode(respStr);
+    final jsonCode = data['code'] ?? 500;
+    return {'code': jsonCode, 'message': data['message'] ?? 'Tidak ada pesan'};
   }
 
   /// Login pengguna dan simpan token jika berhasil

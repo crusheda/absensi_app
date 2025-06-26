@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import '../services/api_service.dart';
 
 class DataModel {
   final String label;
@@ -65,25 +66,45 @@ class _RekapPageState extends State<RekapPage> {
     DataModel('Juli', 6),
   ];
 
-  final Map<String, String> filterOptions = {
-    '1': '1 Minggu Terakhir',
-    '2': '2 Minggu Terakhir',
-    '3': '21 Mei - 20 Juni',
-    '4': '21 Juni - 20 Juli',
-    '5': '21 Juli - Sekarang',
-    '6': '3 Bulan Terakhir',
-    '7': 'Tahun 2025',
-  };
+  late Map<String, String> filterOptions;
+
+  Map<String, String> getFilterOptions() {
+    final now = DateTime.now();
+    final dateFormat = DateFormat('MMMM yyyy', 'id');
+
+    final twoMonthsAgo = DateTime(now.year, now.month - 2);
+    final oneMonthAgo = DateTime(now.year, now.month - 1);
+    final currentMonth = DateTime(now.year, now.month);
+
+    final options = <String, String>{
+      '1': '1 Minggu Terakhir',
+      '2': '2 Minggu Terakhir',
+      '3':
+          '21 ${dateFormat.format(twoMonthsAgo)} - 20 ${dateFormat.format(oneMonthAgo)}',
+      '4':
+          '21 ${dateFormat.format(oneMonthAgo)} - 20 ${dateFormat.format(currentMonth)}',
+      '6': '3 Bulan Terakhir',
+      '7': 'Selama Tahun ${now.year}',
+    };
+
+    // Jika tanggal sekarang > 20, tambahkan opsi "21 Bulan Ini - Sekarang"
+    if (now.day > 20) {
+      options['5'] = '21 ${dateFormat.format(currentMonth)} - Sekarang';
+    }
+
+    return options;
+  }
 
   @override
   void initState() {
     super.initState();
+    filterOptions = getFilterOptions();
     fetchRiwayat();
   }
 
   Future<void> fetchRiwayat() async {
     final url =
-        'http://192.168.254.80:8000/api/kepegawaian/rekap/${widget.id_user}/$selectedFilter';
+        '${ApiService.baseUrl}/kepegawaian/rekap/${widget.id_user}/$selectedFilter';
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
@@ -94,7 +115,7 @@ class _RekapPageState extends State<RekapPage> {
           riwayat = show.map((item) => RiwayatModel.fromJson(item)).toList();
           tepatWaktu = jsonResponse['tepatWaktu'] ?? 0;
           terlambat = jsonResponse['terlambat'] ?? 0;
-          absenone = jsonResponse['absenone'] ?? 0;
+          absenone = jsonResponse['absenOne'] ?? 0;
         });
       } else {
         print("Gagal memuat data riwayat: ${response.body}");
@@ -156,16 +177,16 @@ class _RekapPageState extends State<RekapPage> {
                     Navigator.pop(context);
                     setState(() {
                       selectedFilter = entry.key;
-                      fetchRiwayat();
                     });
+                    fetchRiwayat();
                   },
-                  child: Text(
-                    entry.value,
-                    style: TextStyle(
-                      fontWeight: selectedFilter == entry.key
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                    ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(entry.value),
+                      if (selectedFilter == entry.key)
+                        const Icon(CupertinoIcons.check_mark, size: 18),
+                    ],
                   ),
                 );
               }).toList(),
@@ -183,7 +204,7 @@ class _RekapPageState extends State<RekapPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                filterOptions[selectedFilter]!,
+                filterOptions[selectedFilter] ?? 'Pilih Filter',
                 style: const TextStyle(
                   color: CupertinoColors.black,
                   fontSize: 15,
@@ -216,34 +237,33 @@ class _RekapPageState extends State<RekapPage> {
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       navigationBar: const CupertinoNavigationBar(
-        middle: Text('Rekap Absensi'),
+        middle: Text('Rekapitulasi Absensi'),
       ),
       child: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: SizedBox(
-                height: 200,
-                child: SfCartesianChart(
-                  primaryXAxis: CategoryAxis(),
-                  primaryYAxis: NumericAxis(),
-                  series: <CartesianSeries>[
-                    ColumnSeries<DataModel, String>(
-                      dataSource: chartData,
-                      xValueMapper: (d, _) => d.label,
-                      yValueMapper: (d, _) => d.value,
-                      dataLabelSettings: const DataLabelSettings(
-                        isVisible: true,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 12),
+            // const SizedBox(height: 16),
+            // Padding(
+            //   padding: const EdgeInsets.symmetric(horizontal: 16),
+            //   child: SizedBox(
+            //     height: 200,
+            //     child: SfCartesianChart(
+            //       primaryXAxis: CategoryAxis(),
+            //       primaryYAxis: NumericAxis(),
+            //       series: <CartesianSeries>[
+            //         ColumnSeries<DataModel, String>(
+            //           dataSource: chartData,
+            //           xValueMapper: (d, _) => d.label,
+            //           yValueMapper: (d, _) => d.value,
+            //           dataLabelSettings: const DataLabelSettings(
+            //             isVisible: true,
+            //           ),
+            //         ),
+            //       ],
+            //     ),
+            //   ),
+            // ),
+            // const SizedBox(height: 12),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
@@ -266,6 +286,7 @@ class _RekapPageState extends State<RekapPage> {
             ),
 
             const SizedBox(height: 12),
+
             _buildFilterPicker(context),
 
             const SizedBox(height: 12),
@@ -282,117 +303,131 @@ class _RekapPageState extends State<RekapPage> {
                   _buildStatBox(
                     "Terlambat",
                     "${terlambat}x",
-                    CupertinoColors.systemOrange,
+                    CupertinoColors.systemRed,
                   ),
                   const SizedBox(width: 8),
                   _buildStatBox(
-                    "Absen",
+                    "Absen 1x",
                     "${absenone}x",
-                    CupertinoColors.systemRed,
+                    CupertinoColors.systemOrange,
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Expanded(
-              child: ListView.separated(
-                itemCount: riwayat.length,
-                padding: const EdgeInsets.all(16),
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
-                itemBuilder: (context, index) {
-                  final item = riwayat[index];
-                  return CupertinoButton(
-                    padding: const EdgeInsets.all(12),
-                    color: CupertinoColors.systemGrey6,
-                    borderRadius: BorderRadius.circular(12),
-                    onPressed: () {},
-                    child: Row(
-                      children: [
-                        Icon(
-                          CupertinoIcons.sun_max,
-                          color: CupertinoColors.systemBlue,
+              child: (riwayat?.isEmpty ?? true)
+                  ? const Center(
+                      child: Text(
+                        "Data Absensi tidak ada",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: CupertinoColors.systemGrey,
+                          fontWeight: FontWeight.w500,
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                      ),
+                    )
+                  : ListView.separated(
+                      itemCount: riwayat.length,
+                      padding: const EdgeInsets.all(16),
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final item = riwayat[index];
+                        return CupertinoButton(
+                          padding: const EdgeInsets.all(12),
+                          color: CupertinoColors.systemGrey6,
+                          borderRadius: BorderRadius.circular(12),
+                          onPressed: () {},
+                          child: Row(
                             children: [
-                              Text.rich(
-                                TextSpan(
+                              Icon(
+                                CupertinoIcons.sun_max,
+                                color: CupertinoColors.systemBlue,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    if (item.jenis == 1) ...[
+                                    Text.rich(
                                       TextSpan(
-                                        text: "Shift ${item.shift} ",
-                                        style: const TextStyle(
-                                          fontSize: 15,
-                                          color: Color(0xFF2E2E2E),
-                                          fontWeight: FontWeight.w500,
-                                        ),
+                                        children: [
+                                          if (item.jenis == 1) ...[
+                                            TextSpan(
+                                              text: "Shift ${item.shift} ",
+                                              style: const TextStyle(
+                                                fontSize: 15,
+                                                color: Color(0xFF2E2E2E),
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            if (item.terlambat == 1 &&
+                                                item.tglOut != null)
+                                              const TextSpan(
+                                                text: "(Terlambat)",
+                                                style: TextStyle(
+                                                  color:
+                                                      CupertinoColors.systemRed,
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              )
+                                            else if (item.tglOut == null)
+                                              const TextSpan(
+                                                text: "(Absen 1x)",
+                                                style: TextStyle(
+                                                  color: CupertinoColors
+                                                      .systemYellow,
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              )
+                                            else if (item.terlambat == 0 &&
+                                                item.tglIn != null &&
+                                                item.tglOut != null)
+                                              const TextSpan(
+                                                text: "(Tepat Waktu)",
+                                                style: TextStyle(
+                                                  color: CupertinoColors
+                                                      .activeGreen,
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                          ] else if (item.jenis == 3) ...[
+                                            const TextSpan(
+                                              text: "Ijin / Tidak Masuk",
+                                              style: TextStyle(
+                                                fontSize: 15,
+                                                color: Color(0xFF2E2E2E),
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
                                       ),
-                                      if (item.terlambat == 1 &&
-                                          item.tglOut != null)
-                                        const TextSpan(
-                                          text: "(Terlambat)",
-                                          style: TextStyle(
-                                            color: CupertinoColors.systemRed,
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        )
-                                      else if (item.tglOut == null)
-                                        const TextSpan(
-                                          text: "(Absen 1x)",
-                                          style: TextStyle(
-                                            color: CupertinoColors.systemYellow,
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        )
-                                      else if (item.terlambat == 0 &&
-                                          item.tglIn != null &&
-                                          item.tglOut != null)
-                                        const TextSpan(
-                                          text: "(Tepat Waktu)",
-                                          style: TextStyle(
-                                            color: CupertinoColors.activeBlue,
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                    ] else if (item.jenis == 3) ...[
-                                      const TextSpan(
-                                        text: "Ijin / Tidak Masuk",
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          color: Color(0xFF2E2E2E),
-                                          fontWeight: FontWeight.w500,
-                                        ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      formatTanggal(item.tglIn) ?? '-',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: CupertinoColors.systemGrey,
                                       ),
-                                    ],
+                                    ),
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                formatTanggal(item.tglIn) ?? '-',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: CupertinoColors.systemGrey,
-                                ),
+                              const Icon(
+                                CupertinoIcons.chevron_forward,
+                                color: Color(0xFF2E2E2E),
                               ),
                             ],
                           ),
-                        ),
-                        const Icon(
-                          CupertinoIcons.chevron_forward,
-                          color: Color(0xFF2E2E2E),
-                        ),
-                      ],
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
           ],
         ),

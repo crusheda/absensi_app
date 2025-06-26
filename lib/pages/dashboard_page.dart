@@ -2,8 +2,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
+import '../services/api_service.dart';
+import '../models/dashboard_data.dart';
+import 'dart:convert';
 
 class DashboardPage extends StatefulWidget {
   final int id_user;
@@ -26,18 +30,55 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  DashboardData? dashboard;
   late Timer _timer;
   String _currentTime = "";
+
+  String formatTanggalIndonesia(String? tanggal) {
+    if (tanggal == null) return '-';
+    final dateTime = DateTime.tryParse(tanggal);
+    if (dateTime == null) return '-';
+
+    final formatter = DateFormat(
+      "EEEE, dd MMMM yyyy 'pukul' HH.mm 'WIB'",
+      'id',
+    );
+    return formatter.format(dateTime);
+  }
+
+  String bulanToNama(String? bulan) {
+    if (bulan == null) return '-';
+    int? bulanAngka = int.tryParse(bulan);
+    if (bulanAngka == null || bulanAngka < 1 || bulanAngka > 12) return '-';
+
+    final date = DateTime(2025, bulanAngka);
+    return DateFormat.MMMM('id').format(date);
+  }
 
   @override
   void initState() {
     super.initState();
+    _loadDashboard();
     _updateTime();
     _timer = Timer.periodic(
       const Duration(seconds: 1),
       (timer) => _updateTime(),
     );
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
+  }
+
+  Future<void> _loadDashboard() async {
+    final url = '${ApiService.baseUrl}/dashboard/${widget.id_user}';
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      final jsonMap = json.decode(response.body);
+      setState(() {
+        dashboard = DashboardData.fromJson(jsonMap);
+      });
+    } else {
+      // tangani error
+      print('Gagal ambil data');
+    }
   }
 
   void _updateTime() {
@@ -63,13 +104,19 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (dashboard == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
     final bool isFotoAda = widget.fotoProfil.trim().isNotEmpty;
     final fotoUrl = isFotoAda
-        ? 'https://simrsmu.com/storage/${widget.fotoProfil.replaceFirst('public/', '')}'
+        ? '${ApiService.simrsUrl}/storage/${widget.fotoProfil.replaceFirst('public/', '')}'
         : null;
+    final fotoUrlAdminJadwal = dashboard?.jadwal?.fotoPegawai;
+
     return CupertinoPageScaffold(
       child: SafeArea(
         child: ListView(
+          physics: const ClampingScrollPhysics(),
           padding: const EdgeInsets.all(16),
           children: [
             Row(
@@ -90,7 +137,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       style: TextStyle(color: CupertinoColors.systemGrey),
                     ),
                     Text(
-                      widget.nama,
+                      widget.nama ?? '-',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
@@ -124,13 +171,13 @@ class _DashboardPageState extends State<DashboardPage> {
                     left: 16,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
                           "Status Pegawai",
                           style: TextStyle(color: Colors.white, fontSize: 12),
                         ),
                         Text(
-                          "Kontrak",
+                          dashboard!.statuspgw!.namaStatus,
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -175,7 +222,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                   Column(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
+                    children: [
                       Text(
                         "Jadwal Hari Ini",
                         style: TextStyle(
@@ -186,16 +233,22 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                       SizedBox(height: 1),
                       Text(
-                        "pagi kantor",
+                        (dashboard?.namaShift?.isNotEmpty ?? false)
+                            ? dashboard!.namaShift
+                            : "Tidak Ada",
                         style: TextStyle(
-                          color: Color.fromARGB(255, 200, 255, 205),
+                          color: (dashboard?.namaShift?.isNotEmpty ?? false)
+                              ? const Color.fromARGB(255, 200, 255, 205)
+                              : const Color.fromARGB(255, 255, 199, 199),
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       SizedBox(height: 3),
                       Text(
-                        "08.00 - 15.00 WIB",
+                        (dashboard?.shift?.isNotEmpty ?? false)
+                            ? dashboard!.shift
+                            : "Hubungi Admin Jadwal",
                         style: TextStyle(color: Colors.white),
                       ),
                     ],
@@ -232,86 +285,107 @@ class _DashboardPageState extends State<DashboardPage> {
               children: [
                 _buildSquareStat(
                   "Tepat Waktu",
-                  "14x",
+                  "${dashboard!.hadir}x",
                   CupertinoColors.activeBlue,
                 ),
                 _buildSquareStat(
                   "Absen 1x/hr",
-                  "0x",
+                  "${dashboard!.absenOne}x",
                   CupertinoColors.systemOrange,
                 ),
-                _buildSquareStat("Terlambat", "2x", CupertinoColors.systemRed),
-                _buildSquareStat("Ijin", "0x", CupertinoColors.systemGreen),
+                _buildSquareStat(
+                  "Terlambat",
+                  "${dashboard!.terlambat}x",
+                  CupertinoColors.systemRed,
+                ),
+                _buildSquareStat(
+                  "Ijin",
+                  "${dashboard!.ijin}x",
+                  CupertinoColors.systemGreen,
+                ),
               ],
             ),
             const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: CupertinoColors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x22000000), blurRadius: 4),
-                ],
-              ),
-              child: Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 24,
-                    backgroundColor: CupertinoColors.systemGrey4,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          "Jadwal Juni 2025",
-                          style: TextStyle(fontWeight: FontWeight.bold),
+            dashboard?.jadwal != null
+                ? Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: CupertinoColors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: const [
+                        BoxShadow(color: Color(0x22000000), blurRadius: 4),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: CupertinoColors.systemGrey4,
+                          backgroundImage:
+                              (fotoUrlAdminJadwal != null &&
+                                  fotoUrlAdminJadwal.isNotEmpty)
+                              ? NetworkImage(
+                                  "${ApiService.simrsUrl}/storage/${fotoUrlAdminJadwal.replaceFirst('public/', '')}",
+                                )
+                              : const AssetImage('assets/user.png'),
                         ),
-                        SizedBox(height: 2),
-                        Text(
-                          "Diperbarui oleh:",
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: CupertinoColors.systemGrey,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Jadwal ${bulanToNama(dashboard?.jadwal?.bulan)} ${dashboard?.jadwal?.tahun}",
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                "Diperbarui oleh:",
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: CupertinoColors.systemGrey,
+                                ),
+                              ),
+                              SizedBox(height: 1),
+                              Text(
+                                "${dashboard?.jadwal?.namaPegawai} (Admin Jadwal)",
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: CupertinoColors.systemGrey,
+                                ),
+                              ),
+                              SizedBox(height: 1),
+                              Text(
+                                formatTanggalIndonesia(
+                                  dashboard?.jadwal?.updatedAt,
+                                ),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: CupertinoColors.systemGrey,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        SizedBox(height: 1),
-                        Text(
-                          "Herman Susilo (Admin Jadwal)",
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: CupertinoColors.systemGrey,
-                          ),
-                        ),
-                        SizedBox(height: 1),
-                        Text(
-                          "Sabtu, 31 Mei 2025 pukul 19.51 WIB",
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: CupertinoColors.systemGrey,
+                        CupertinoButton(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          color: const Color.fromARGB(255, 71, 71, 71),
+                          onPressed: () {},
+                          child: const Text(
+                            "LIHAT",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Color.fromARGB(255, 255, 255, 255),
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  CupertinoButton(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    color: const Color.fromARGB(255, 39, 39, 39),
-                    onPressed: () {},
-                    child: const Text(
-                      "LIHAT",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color.fromARGB(255, 255, 255, 255),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
+                  )
+                : const SizedBox.shrink(),
+            dashboard?.jadwal != null
+                ? const SizedBox(height: 20)
+                : const SizedBox(height: 0),
             _buildActionTile(
               "Riwayat Absensi",
               CupertinoIcons.clock,

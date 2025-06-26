@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'jadwal_page.dart';
 import 'dashboard_page.dart';
 import 'absensi_page.dart';
 import 'rekap_page.dart';
@@ -37,7 +38,7 @@ class _MainPageState extends State<MainPage> {
         nip: widget.nip,
         fotoProfil: widget.fotoProfil,
       ),
-      RekapPage(id_user: widget.id_user),
+      JadwalPage(),
       AbsensiPage(id_user: widget.id_user, nip: widget.nip),
       RekapPage(id_user: widget.id_user),
       SettingPage(
@@ -49,29 +50,38 @@ class _MainPageState extends State<MainPage> {
       ),
     ];
 
-    return Scaffold(
-      body: pages[currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: currentIndex,
-        onTap: (i) => setState(() => currentIndex = i),
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.work_history),
-            label: 'Aktivitas',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.camera_alt),
-            label: 'Absensi',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Rekap'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Setting'),
-        ],
+    return WillPopScope(
+      onWillPop: () async => false, // Mencegah tombol back
+      child: Scaffold(
+        body: pages[currentIndex],
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: currentIndex,
+          onTap: (i) => setState(() => currentIndex = i),
+          selectedItemColor: Colors.blue,
+          unselectedItemColor: Colors.grey,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard),
+              label: 'Dashboard',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.work_history),
+              label: 'Jadwal',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.camera_alt),
+              label: 'Absensi',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.bar_chart),
+              label: 'Rekap',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings),
+              label: 'Pengaturan',
+            ),
+          ],
+        ),
       ),
     );
   }
