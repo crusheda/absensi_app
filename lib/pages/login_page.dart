@@ -27,6 +27,7 @@ class _LoginPageState extends State<LoginPage> {
 
     if (result['success']) {
       final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('id_user', result['id_user']);
       await prefs.setString('nip', result['nip']);
       await prefs.setString('name', result['nama']);
       await prefs.setString('nama', result['nama']);
@@ -36,6 +37,7 @@ class _LoginPageState extends State<LoginPage> {
         context,
         CupertinoPageRoute(
           builder: (_) => MainPage(
+            id_user: result['id_user'],
             name: result['nama'],
             nama: result['nama'],
             nip: result['nip'],

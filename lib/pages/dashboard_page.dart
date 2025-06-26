@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 
 class DashboardPage extends StatefulWidget {
+  final int id_user;
   final String name;
   final String nama;
   final String nip;
@@ -13,6 +14,7 @@ class DashboardPage extends StatefulWidget {
 
   const DashboardPage({
     super.key,
+    required this.id_user,
     required this.name,
     required this.nama,
     required this.nip,

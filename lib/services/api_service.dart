@@ -5,10 +5,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // Ganti sesuai URL API Laravel kamu
-  static const String baseUrl = "http://192.168.1.35:8000/api";
+  // static const String baseUrl = "http://192.168.1.35:8000/api";
+  static const String baseUrl = "http://192.168.254.80:8000/api";
 
   /// Kirim absensi dengan foto dan lokasi
   static Future<String> kirimAbsensi({
+    required String id_user,
     required String nip,
     required File imageFile,
     required double latitude,
@@ -18,6 +20,7 @@ class ApiService {
     final uri = Uri.parse('$baseUrl/absensi');
 
     var request = http.MultipartRequest('POST', uri)
+      ..fields['id_user'] = id_user
       ..fields['nip'] = nip
       ..fields['latitude'] = latitude.toString()
       ..fields['longitude'] = longitude.toString()
@@ -67,6 +70,7 @@ class ApiService {
         return {
           'success': true,
           'message': data['message'],
+          'id_user': data['user']['id_user'],
           'nip': data['user']['nip'],
           'name': data['user']['name'],
           'nama': data['user']['nama'],

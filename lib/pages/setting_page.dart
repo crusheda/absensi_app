@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import 'login_page.dart';
 
 class SettingPage extends StatelessWidget {
+  final int id_user;
   final String name;
   final String nama;
   final String nip;
@@ -12,6 +13,7 @@ class SettingPage extends StatelessWidget {
 
   const SettingPage({
     super.key,
+    required this.id_user,
     required this.name,
     required this.nama,
     required this.nip,

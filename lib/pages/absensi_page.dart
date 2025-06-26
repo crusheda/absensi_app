@@ -9,10 +9,13 @@ import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
+import 'package:app_settings/app_settings.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class AbsensiPage extends StatefulWidget {
+  final int id_user;
   final String nip;
-  const AbsensiPage({super.key, required this.nip});
+  const AbsensiPage({super.key, required this.nip, required this.id_user});
 
   @override
   State<AbsensiPage> createState() => _AbsensiPageState();
@@ -21,6 +24,10 @@ class AbsensiPage extends StatefulWidget {
 class _AbsensiPageState extends State<AbsensiPage> {
   static const kantorPos = LatLng(-7.5104256, 110.5887232);
   static const radiusKantorMeter = 100.0;
+  bool _izinLokasiDitolak = false;
+  bool _notifikasiSudahDikirim = false;
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
   Position? _position;
   StreamSubscription<Position>? _positionStream;
@@ -31,6 +38,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
   @override
   void initState() {
     super.initState();
+    _initNotification();
     _startLocationStream();
     _updateTime();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) => _updateTime());
@@ -45,22 +53,57 @@ class _AbsensiPageState extends State<AbsensiPage> {
     if (mounted) setState(() => _currentTime = formatted);
   }
 
-  void _startLocationStream() async {
-    if (_positionStream != null) return; // <-- Tambahkan ini
+  void _initNotification() async {
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
 
+    final initSettings = InitializationSettings(android: androidInit);
+
+    await flutterLocalNotificationsPlugin.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        // Cek payload
+        if (response.payload == 'open_location_settings') {
+          AppSettings.openAppSettings(); // Buka pengaturan aplikasi
+        }
+      },
+    );
+    await flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
+  }
+
+  void _startLocationStream() async {
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
+
     if (permission == LocationPermission.deniedForever ||
-        permission == LocationPermission.denied)
+        permission == LocationPermission.denied) {
+      setState(() {
+        _izinLokasiDitolak = true;
+        _position = null;
+      });
+
+      if (!_notifikasiSudahDikirim) {
+        _notifikasiSudahDikirim = true; // cegah kirim ulang
+        _tampilkanNotifikasiLokasiGagal();
+      }
+
       return;
+    }
+
+    setState(() {
+      _izinLokasiDitolak = false;
+    });
 
     _positionStream =
         Geolocator.getPositionStream(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.best,
-            distanceFilter: 1,
+            distanceFilter: 0,
           ),
         ).listen((pos) {
           if (mounted) setState(() => _position = pos);
@@ -93,6 +136,38 @@ class _AbsensiPageState extends State<AbsensiPage> {
     if (pickedFile != null) {
       setState(() => _imageFile = File(pickedFile.path));
     }
+  }
+
+  Future<void> _tampilkanNotifikasiLokasiGagal() async {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+          'lokasi_channel',
+          'Peringatan Lokasi',
+          channelDescription: 'Notifikasi saat perizinan lokasi gagal',
+          importance: Importance.max,
+          priority: Priority.high,
+          ticker: 'ticker',
+        );
+
+    const NotificationDetails notifDetails = NotificationDetails(
+      android: androidDetails,
+    );
+
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      'Perizinan Lokasi Gagal',
+      'Aktifkan lokasi agar dapat melakukan absensi.',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'lokasi_channel',
+          'Peringatan Lokasi',
+          channelDescription: 'Notifikasi saat perizinan lokasi gagal',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+      ),
+      payload: 'open_location_settings', // <--- Tambahkan ini
+    );
   }
 
   @override
@@ -177,6 +252,36 @@ class _AbsensiPageState extends State<AbsensiPage> {
                 ],
               ),
 
+              if (_izinLokasiDitolak)
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 12,
+                  left: 16,
+                  right: 16,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: CupertinoColors.systemRed.withOpacity(0.1),
+                      border: Border.all(color: CupertinoColors.systemRed),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          CupertinoIcons.info,
+                          color: CupertinoColors.systemRed,
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            "Perizinan lokasi gagal. Aktifkan lokasi untuk melanjutkan absensi.",
+                            style: TextStyle(color: CupertinoColors.systemRed),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
               // Floating Panel
               Align(
                 alignment: Alignment.bottomCenter,
@@ -207,7 +312,8 @@ class _AbsensiPageState extends State<AbsensiPage> {
                               const Icon(CupertinoIcons.location, size: 18),
                               const SizedBox(width: 6),
                               Expanded(
-                                child: _position == null
+                                child:
+                                    (_position == null && !_izinLokasiDitolak)
                                     ? Row(
                                         children: const [
                                           CupertinoActivityIndicator(
@@ -216,6 +322,13 @@ class _AbsensiPageState extends State<AbsensiPage> {
                                           SizedBox(width: 8),
                                           Text("Sedang mendeteksi lokasi..."),
                                         ],
+                                      )
+                                    : _izinLokasiDitolak
+                                    ? const Text(
+                                        "Perizinan lokasi ditolak",
+                                        style: TextStyle(
+                                          color: CupertinoColors.systemRed,
+                                        ),
                                       )
                                     : Text(() {
                                         if (distance > 10000) {
@@ -309,10 +422,16 @@ class _AbsensiPageState extends State<AbsensiPage> {
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               color: Colors.redAccent,
                               borderRadius: BorderRadius.circular(10),
-                              onPressed: () => _ambilFoto(),
+                              onPressed:
+                                  (_position != null && !_izinLokasiDitolak)
+                                  ? () => _ambilFoto()
+                                  : null,
                               child: const Text(
                                 "PULANG",
-                                style: TextStyle(color: Colors.white),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                ),
                               ),
                             ),
                           ),
@@ -322,10 +441,16 @@ class _AbsensiPageState extends State<AbsensiPage> {
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               color: Colors.amber,
                               borderRadius: BorderRadius.circular(10),
-                              onPressed: () => _ambilFoto(),
+                              onPressed:
+                                  (_position != null && !_izinLokasiDitolak)
+                                  ? () => _ambilFoto()
+                                  : null,
                               child: const Text(
                                 "IJIN",
-                                style: TextStyle(color: Colors.white),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                ),
                               ),
                             ),
                           ),
@@ -335,10 +460,16 @@ class _AbsensiPageState extends State<AbsensiPage> {
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               color: Colors.blueAccent,
                               borderRadius: BorderRadius.circular(10),
-                              onPressed: () => _ambilFoto(),
+                              onPressed:
+                                  (_position != null && !_izinLokasiDitolak)
+                                  ? () => _ambilFoto()
+                                  : null,
                               child: const Text(
                                 "BERANGKAT",
-                                style: TextStyle(color: Colors.white),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                ),
                               ),
                             ),
                           ),

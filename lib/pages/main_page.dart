@@ -5,6 +5,7 @@ import 'rekap_page.dart';
 import 'setting_page.dart';
 
 class MainPage extends StatefulWidget {
+  final int id_user;
   final String name;
   final String nama;
   final String nip;
@@ -12,6 +13,7 @@ class MainPage extends StatefulWidget {
 
   const MainPage({
     super.key,
+    required this.id_user,
     required this.name,
     required this.nama,
     required this.nip,
@@ -29,15 +31,17 @@ class _MainPageState extends State<MainPage> {
   Widget build(BuildContext context) {
     final pages = [
       DashboardPage(
+        id_user: widget.id_user,
         name: widget.name,
         nama: widget.nama,
         nip: widget.nip,
         fotoProfil: widget.fotoProfil,
       ),
-      RekapPage(nip: widget.nip),
-      AbsensiPage(nip: widget.nip),
-      RekapPage(nip: widget.nip),
+      RekapPage(id_user: widget.id_user),
+      AbsensiPage(id_user: widget.id_user, nip: widget.nip),
+      RekapPage(id_user: widget.id_user),
       SettingPage(
+        id_user: widget.id_user,
         name: widget.name,
         nama: widget.nama,
         nip: widget.nip,

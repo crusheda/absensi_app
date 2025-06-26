@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'pages/login_page.dart';
 import 'pages/main_page.dart';
 import 'pages/splash_page.dart';
 
-void main() {
+void main() async {
   Intl.defaultLocale = 'id_ID';
+  WidgetsFlutterBinding.ensureInitialized(); // ⬅️ WAJIB: untuk async di main()
+  await initializeDateFormatting('id', null); // ⬅️ Inisialisasi locale "id"
   runApp(const MyApp());
 }
 
@@ -19,14 +22,16 @@ class MyApp extends StatelessWidget {
     await Future.delayed(const Duration(seconds: 2)); // ⏱️ Splash duration
 
     final prefs = await SharedPreferences.getInstance();
+    final id_user = prefs.getInt('id_user');
     final token = prefs.getString('token');
     final name = prefs.getString('name');
     final nama = prefs.getString('nama');
     final nip = prefs.getString('nip');
     final foto = prefs.getString('foto_profil');
 
-    if (token != null && nama != null && nip != null) {
+    if (id_user != null && token != null && nama != null && nip != null) {
       return MainPage(
+        id_user: id_user!,
         name: name ?? '',
         nama: nama ?? '',
         nip: nip ?? '',
