@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
@@ -8,6 +9,17 @@ class ApiService {
   // static const String baseUrl = "http://192.168.254.80:8000/api";
   static const String baseUrl = "http://192.168.1.35:8000/api";
   static const String simrsUrl = "https://simrsmu.com";
+
+  static Future<LatLng> getLokasiKantor() async {
+    final response = await http.get(Uri.parse('$baseUrl/lokasi-kantor'));
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return LatLng(data['latitude'], data['longitude']);
+    } else {
+      throw Exception('Gagal mengambil lokasi kantor');
+    }
+  }
 
   static Future<Map<String, dynamic>> cekValidasiTombol({
     required int id_user,
