@@ -29,7 +29,7 @@ class AbsensiPage extends StatefulWidget {
 class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
   // static const lokasiAbsensi = LatLng(-7.63784400323098, 110.86790404168357);
   static const radiusKantorMeter = 30.0;
-  LatLng? lokasiAbsensi = LatLng(-7.677808018043964, 110.83967042125602);
+  LatLng? lokasiAbsensi = LatLng(-7.637823555197155, 110.86796229092549);
   // LOKASI RS = -7.677808018043964, 110.83967042125602
   // LOKASI RUMAH = -7.637823555197155, 110.86796229092549
 
@@ -611,17 +611,50 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
 
       final lat = _position?.latitude;
       final long = _position?.longitude;
+      final TextEditingController keteranganController =
+          TextEditingController();
 
       showCupertinoDialog(
         context: context,
         builder: (_) => CupertinoAlertDialog(
           title: const Text("Konfirmasi Absensi"),
           content: Column(
+            crossAxisAlignment:
+                CrossAxisAlignment.start, // atur rata kiri untuk label
+            mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: 12),
-              Image.file(file, height: 180),
+              Center(child: Image.file(file, height: 180)),
               const SizedBox(height: 12),
-              Text("Lat: ${lat ?? '-'}\nLong: ${long ?? '-'}"),
+              Center(
+                child: Text(
+                  "Lat: ${lat ?? '-'}\nLong: ${long ?? '-'}",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ),
+              if (jenis == AbsensiJenis.ijin) ...[
+                const SizedBox(height: 12),
+                const Text(
+                  "Keterangan Ijin (Wajib Diisi)",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: CupertinoColors.systemGrey,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                CupertinoTextField(
+                  controller: keteranganController,
+                  maxLines: 2,
+                  placeholder: "",
+                  placeholderStyle: const TextStyle(fontSize: 12), // font kecil
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 12,
+                  ),
+                ),
+              ],
             ],
           ),
           actions: [
@@ -634,14 +667,17 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
             ),
             CupertinoDialogAction(
               isDefaultAction: true,
-              child: const Text("Submit"),
               onPressed: () async {
                 Navigator.pop(context);
-                // _submitAbsensi(file, lat, long);
-                await _submitAbsensi(file, lat, long, jenis);
+                final keterangan = jenis == AbsensiJenis.ijin
+                    ? keteranganController.text.trim()
+                    : null;
+
+                await _submitAbsensi(file, lat, long, jenis, keterangan ?? '');
                 await _refreshLocation();
                 _sedangSubmitAbsensi = false;
               },
+              child: const Text("Submit"),
             ),
           ],
         ),
@@ -672,6 +708,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
     double? lat,
     double? long,
     AbsensiJenis jenis,
+    String keterangan,
   ) async {
     if (lat == null || long == null) {
       _showAlert('Gagal', 'Lokasi tidak tersedia.');
@@ -692,13 +729,14 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
     );
 
     try {
-      final result = await ApiService.kirimAbsensiBerangkat(
+      final result = await ApiService.kirimAbsensi(
         id_user: widget.id_user.toString(),
         nip: widget.nip,
         imageFile: file,
         latitude: lat,
         longitude: long,
         jenis: jenis.kode, // gunakan kode dari enum
+        keterangan: keterangan,
       );
 
       if (context.mounted) Navigator.pop(context); // Tutup loading
@@ -749,20 +787,20 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
             ),
           ),
         );
-        // showCupertinoDialog(
-        //   context: context,
-        //   builder: (_) => CupertinoAlertDialog(
-        //     title: Text('Gagal Absensi - Code ${result['code']}'),
-        //     content: Text(result['message']),
-        //     actions: [
-        //       CupertinoDialogAction(
-        //         isDefaultAction: true,
-        //         child: const Text('Tutup'),
-        //         onPressed: () => Navigator.pop(context),
-        //       ),
-        //     ],
-        //   ),
-        // );
+        showCupertinoDialog(
+          context: context,
+          builder: (_) => CupertinoAlertDialog(
+            title: Text('Gagal Absensi - Code ${result['code']}'),
+            content: Text(result['message']),
+            actions: [
+              CupertinoDialogAction(
+                isDefaultAction: true,
+                child: const Text('Tutup'),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        );
       }
     } catch (e) {
       if (context.mounted) Navigator.pop(context); // Tutup loading

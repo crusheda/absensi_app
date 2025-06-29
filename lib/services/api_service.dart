@@ -1,13 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:path/path.dart' as path;
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // Ganti sesuai URL API Laravel kamu
-  static const String baseUrl = "http://192.168.254.80:8000/api";
-  // static const String baseUrl = "http://192.168.1.35:8000/api";
+  // static const String baseUrl = "http://192.168.254.80:8000/api";
+  static const String baseUrl = "http://192.168.1.35:8000/api";
   static const String simrsUrl = "https://simrsmu.com";
 
   static Future<LatLng> getLokasiKantor() async {
@@ -55,30 +57,68 @@ class ApiService {
   }
 
   /// Kirim absensi dengan foto dan lokasi
-  static Future<Map<String, dynamic>> kirimAbsensiBerangkat({
+  static String mimeTypeFromExtension(String filePath) {
+    final ext = path.extension(filePath).toLowerCase();
+    switch (ext) {
+      case '.jpg':
+      case '.jpeg':
+        return 'jpeg';
+      case '.png':
+        return 'png';
+      default:
+        return 'jpeg'; // default fallback
+    }
+  }
+
+  static Future<Map<String, dynamic>> kirimAbsensi({
     required String id_user,
     required String nip,
     required File imageFile,
     required double latitude,
     required double longitude,
     required String jenis,
+    String? keterangan,
   }) async {
     final uri = Uri.parse('$baseUrl/absensi');
+    final extension = mimeTypeFromExtension(imageFile.path);
 
-    var request = http.MultipartRequest('POST', uri)
+    final request = http.MultipartRequest('POST', uri)
       ..headers['Accept'] = 'application/json'
       ..fields['id_user'] = id_user
       ..fields['nip'] = nip
       ..fields['latitude'] = latitude.toString()
       ..fields['longitude'] = longitude.toString()
-      ..fields['jenis'] = jenis
-      ..files.add(await http.MultipartFile.fromPath('foto', imageFile.path));
+      ..fields['jenis'] = jenis;
+    if (keterangan != null && keterangan.trim().isNotEmpty) {
+      request.fields['keterangan'] = keterangan;
+    }
 
-    var response = await request.send();
-    final respStr = await response.stream.bytesToString();
-    final data = jsonDecode(respStr);
-    final jsonCode = data['code'] ?? 500;
-    return {'code': jsonCode, 'message': data['message'] ?? 'Tidak ada pesan'};
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'foto',
+        imageFile.path,
+        contentType: MediaType('image', extension),
+      ),
+    );
+
+    try {
+      final response = await request.send();
+      final respStr = await response.stream.bytesToString();
+
+      final data = jsonDecode(respStr);
+      final jsonCode = data['code'] ?? 500;
+
+      return {
+        'code': jsonCode,
+        'message': data['message'] ?? 'Tidak ada pesan',
+        'data': data['data'] ?? {},
+      };
+    } catch (e) {
+      return {
+        'code': 401,
+        'message': 'Terjadi kesalahan saat mengirim data: $e',
+      };
+    }
   }
 
   /// Login pengguna dan simpan token jika berhasil
