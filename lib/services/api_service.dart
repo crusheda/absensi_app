@@ -6,8 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // Ganti sesuai URL API Laravel kamu
-  // static const String baseUrl = "http://192.168.254.80:8000/api";
-  static const String baseUrl = "http://192.168.1.35:8000/api";
+  static const String baseUrl = "http://192.168.254.80:8000/api";
+  // static const String baseUrl = "http://192.168.1.35:8000/api";
   static const String simrsUrl = "https://simrsmu.com";
 
   static Future<LatLng> getLokasiKantor() async {
@@ -25,6 +25,7 @@ class ApiService {
     required int id_user,
     required double latitude,
     required double longitude,
+    required double jarak,
   }) async {
     final response = await http.post(
       Uri.parse('$baseUrl/validasi'),
@@ -32,6 +33,7 @@ class ApiService {
         'id_user': id_user.toString(),
         'latitude': latitude.toString(),
         'longitude': longitude.toString(),
+        'jarak': jarak.toString(),
       },
     );
 
@@ -41,6 +43,7 @@ class ApiService {
         'berangkat': data['berangkat'] ?? false,
         'pulang': data['pulang'] ?? false,
         'ijin': data['ijin'] ?? false,
+        // 'absenclear': data['absenclear'] ?? false,
         'nama': data['nama'] ?? '-',
         'jam': data['jam'] ?? '-',
         'keterangan': data['keterangan'] ?? '-',
@@ -52,7 +55,7 @@ class ApiService {
   }
 
   /// Kirim absensi dengan foto dan lokasi
-  static Future<Map<String, dynamic>> kirimAbsensi({
+  static Future<Map<String, dynamic>> kirimAbsensiBerangkat({
     required String id_user,
     required String nip,
     required File imageFile,

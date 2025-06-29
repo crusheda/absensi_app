@@ -26,12 +26,15 @@ class AbsensiPage extends StatefulWidget {
   State<AbsensiPage> createState() => _AbsensiPageState();
 }
 
-class _AbsensiPageState extends State<AbsensiPage> {
+class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
   // static const lokasiAbsensi = LatLng(-7.63784400323098, 110.86790404168357);
   static const radiusKantorMeter = 30.0;
-  LatLng? lokasiAbsensi = LatLng(-7.637823555197155, 110.86796229092549);
-  // LOKASI RS = -7.677851238136329, 110.83968584828327
+  LatLng? lokasiAbsensi = LatLng(-7.677808018043964, 110.83967042125602);
+  // LOKASI RS = -7.677808018043964, 110.83967042125602
+  // LOKASI RUMAH = -7.637823555197155, 110.86796229092549
 
+  bool _sedangSubmitAbsensi = false;
+  bool _isRefreshingLocation = false;
   bool _izinLokasiDitolak = false;
   bool _notifikasiSudahDikirim = false;
   bool _isMocked = false;
@@ -59,20 +62,10 @@ class _AbsensiPageState extends State<AbsensiPage> {
   @override
   void initState() {
     super.initState();
-    _initNotification();
-    _requestNotificationPermission();
-    // _requestCameraPermission();
-    // _startLocationStream();
+    WidgetsBinding.instance.addObserver(this);
+    _initializeAsync();
     _updateTime();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) => _updateTime());
-
-    _ambilLokasiKantor().then((_) {
-      if (lokasiAbsensi != null) {
-        _startLocationStream(); // hanya dijalankan setelah lokasi kantor siap
-      } else {
-        print('❌ Lokasi kantor belum tersedia, tidak bisa validasi lokasi');
-      }
-    });
   }
 
   void _showAlert(String title, String message) {
@@ -101,29 +94,6 @@ class _AbsensiPageState extends State<AbsensiPage> {
       'id_ID',
     ).format(now);
     if (mounted) setState(() => _currentTime = formatted);
-  }
-
-  void _initNotification() async {
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    final initSettings = InitializationSettings(android: androidInit);
-
-    await flutterLocalNotificationsPlugin.initialize(
-      initSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) {
-        // Cek payload
-        if (response.payload == 'open_location_settings') {
-          AppSettings.openAppSettings(); // Buka pengaturan aplikasi
-        } else if (response.payload == 'open_camera_settings') {
-          AppSettings.openAppSettings();
-        }
-      },
-    );
-    await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-          IOSFlutterLocalNotificationsPlugin
-        >()
-        ?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
   void _startLocationStream() async {
@@ -162,7 +132,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
         if (_position != null) {
           mapController.move(
             LatLng(_position!.latitude, _position!.longitude),
-            17.0, // Zoom level
+            18.0, // Zoom level
           );
         }
       });
@@ -174,7 +144,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
       print("Gagal mendapatkan posisi awal: $e");
     }
 
-    if (!_sudahValidasiAwal && _position != null) {
+    if (!_sedangSubmitAbsensi && !_sudahValidasiAwal && _position != null) {
       _sudahValidasiAwal = true;
 
       print(
@@ -193,34 +163,47 @@ class _AbsensiPageState extends State<AbsensiPage> {
         lokasiAbsensi!.longitude,
       );
 
-      if (jarak > radiusKantorMeter) {
-        showCupertinoDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return CupertinoAlertDialog(
-              title: const Text('Di Luar Radius Kantor'),
-              content: const Text(
-                'Anda berada di luar radius kantor (> 30 meter). Silakan mendekat ke area kantor untuk melakukan absensi.',
-              ),
-              actions: [
-                CupertinoDialogAction(
-                  child: const Text('Tutup'),
-                  isDefaultAction: true,
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            );
-          },
-        );
-        return; // ⛔ stop, jangan lanjut ke cekValidasiTombol
-      }
+      // if (jarak > radiusKantorMeter) {
+      //   setState(() {
+      //     aktifBerangkat = false;
+      //     aktifPulang = false;
+      //     aktifIjin = true;
+
+      //     // Kosongkan juga jadwal jika ingin
+      //     jadwalNama = "-";
+      //     jadwalJam = "-";
+      //     jadwalKeterangan = "Anda berada $jarak m di Luar Radius Rumah Sakit";
+      //     msgAbsensi =
+      //         "Anda hanya dapat mengajukan Ijin karena berada di luar radius.";
+      //   });
+      //   showCupertinoDialog(
+      //     context: context,
+      //     builder: (BuildContext context) {
+      //       return CupertinoAlertDialog(
+      //         title: const Text('Di Luar Radius Kantor'),
+      //         content: const Text(
+      //           'Anda berada di luar radius kantor (> 30 meter). Silakan mendekat ke area kantor untuk melakukan absensi.',
+      //         ),
+      //         actions: [
+      //           CupertinoDialogAction(
+      //             child: const Text('Tutup'),
+      //             isDefaultAction: true,
+      //             onPressed: () {
+      //               Navigator.of(context).pop();
+      //             },
+      //           ),
+      //         ],
+      //       );
+      //     },
+      //   );
+      //   return; // ⛔ stop, jangan lanjut ke cekValidasiTombol
+      // }
       try {
         final data = await ApiService.cekValidasiTombol(
           id_user: widget.id_user,
           latitude: _position!.latitude,
           longitude: _position!.longitude,
+          jarak: jarak,
         );
         setState(() {
           aktifBerangkat = data['berangkat'];
@@ -241,7 +224,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
           builder: (BuildContext context) {
             // Jalankan timer setelah dialog ditampilkan
             Future.delayed(const Duration(seconds: 5), () {
-              if (Navigator.of(context).canPop()) {
+              if (mounted && Navigator.of(context).canPop()) {
                 Navigator.of(context).pop();
               }
             });
@@ -294,7 +277,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
                       const Duration(seconds: 15)) {
                 _lastValidation = now;
                 try {
-                  await _cekValidasiTombol(); // 👈 bungkus ini
+                  await _cekValidasiTombol();
                 } catch (e) {
                   print("Gagal validasi tombol di stream: $e");
                 }
@@ -311,9 +294,26 @@ class _AbsensiPageState extends State<AbsensiPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _positionStream?.cancel();
     _timer.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state == AppLifecycleState.resumed) {
+      print('App resumed, refresh page');
+
+      final permission = await Geolocator.checkPermission();
+
+      if (permission != LocationPermission.denied &&
+          permission != LocationPermission.deniedForever) {
+        _refreshLocation();
+      } else {
+        print("🔁 Diblokir: Izin lokasi ditolak, tidak refresh.");
+      }
+    }
   }
 
   double _calculateJarak() {
@@ -329,13 +329,53 @@ class _AbsensiPageState extends State<AbsensiPage> {
     );
   }
 
-  // Future<void> _ambilFoto() async {
-  //   final picker = ImagePicker();
-  //   final pickedFile = await picker.pickImage(source: ImageSource.camera);
-  //   if (pickedFile != null) {
-  //     setState(() => _imageFile = File(pickedFile.path));
-  //   }
-  // }
+  Future<void> _initNotification() async {
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    final initSettings = InitializationSettings(android: androidInit);
+
+    await flutterLocalNotificationsPlugin.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        if (response.payload == 'open_location_settings' ||
+            response.payload == 'open_camera_settings') {
+          AppSettings.openAppSettings();
+        }
+      },
+    );
+
+    await flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
+  }
+
+  Future<void> _initializeAsync() async {
+    await _initNotification();
+
+    final notifStatus = await _requestNotificationPermission();
+
+    // Beri jeda kecil agar sistem stabil sebelum lanjut ke permission lain
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    if (notifStatus.isGranted) {
+      final locationStatus = await _requestLocationPermission();
+
+      if (locationStatus.isGranted) {
+        print('✅ Lokasi diizinkan');
+      } else {
+        print('❌ Lokasi ditolak atau dibatalkan');
+      }
+    } else {
+      print('❌ Notifikasi ditolak, skip izin lokasi');
+    }
+
+    await _ambilLokasiKantor();
+
+    if (lokasiAbsensi != null) {
+      _startLocationStream();
+    }
+  }
 
   Future<void> _ambilLokasiKantor() async {
     try {
@@ -349,10 +389,77 @@ class _AbsensiPageState extends State<AbsensiPage> {
     }
   }
 
-  Future<void> _requestNotificationPermission() async {
-    if (Platform.isAndroid && await Permission.notification.isDenied) {
-      await Permission.notification.request();
+  Future<void> _refreshLocation() async {
+    print('Tombol Refresh Lokasi Atas ditekan');
+
+    final permission = await Geolocator.checkPermission();
+
+    if (permission == LocationPermission.deniedForever ||
+        permission == LocationPermission.denied) {
+      print("❌ Izin lokasi tidak diberikan, batal refresh.");
+      _izinLokasiDitolak = true;
+      return;
     }
+
+    setState(() => _isRefreshingLocation = true);
+
+    try {
+      final current = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      setState(() {
+        _position = current;
+        _isMocked = current.isMocked;
+        // if (_position != null) {
+        //   mapController.move(
+        //     LatLng(_position!.latitude, _position!.longitude),
+        //     17.0,
+        //   );
+        // }
+      });
+
+      try {
+        if (_position != null) {
+          mapController.move(
+            LatLng(_position!.latitude, _position!.longitude),
+            18.0,
+          );
+        }
+      } catch (e) {
+        print('❌ Gagal memindahkan map: $e');
+      }
+
+      if (_isMocked) {
+        _tampilkanNotifikasiFakeGps();
+      }
+    } catch (e) {
+      print("❌ Gagal refresh lokasi: $e");
+    }
+
+    await _ambilLokasiKantor();
+
+    if (lokasiAbsensi != null) {
+      _sudahValidasiAwal = false;
+      _startLocationStream();
+    }
+
+    // await _cekValidasiTombol();
+
+    setState(() => _isRefreshingLocation = false);
+  }
+
+  Future<PermissionStatus> _requestNotificationPermission() async {
+    PermissionStatus status = PermissionStatus.denied;
+
+    if (Platform.isAndroid) {
+      status = await Permission.notification.status;
+      if (status.isDenied) {
+        status = await Permission.notification.request();
+      }
+    }
+
+    return status;
   }
 
   Future<void> _tampilkanNotifikasiLokasiGagal() async {
@@ -385,6 +492,16 @@ class _AbsensiPageState extends State<AbsensiPage> {
       ),
       payload: 'open_location_settings', // <--- Tambahkan ini
     );
+  }
+
+  Future<PermissionStatus> _requestLocationPermission() async {
+    PermissionStatus status = await Permission.location.status;
+
+    if (status.isDenied) {
+      status = await Permission.location.request();
+    }
+
+    return status;
   }
 
   Future<void> _requestCameraPermission() async {
@@ -450,32 +567,41 @@ class _AbsensiPageState extends State<AbsensiPage> {
     if (_position == null) return;
 
     try {
+      final jarak = Geolocator.distanceBetween(
+        _position!.latitude,
+        _position!.longitude,
+        lokasiAbsensi!.latitude,
+        lokasiAbsensi!.longitude,
+      );
       final hasil = await ApiService.cekValidasiTombol(
         id_user: widget.id_user,
         latitude: _position!.latitude,
         longitude: _position!.longitude,
+        jarak: jarak,
       );
 
       setState(() {
         aktifBerangkat = hasil['berangkat'] ?? false;
         aktifPulang = hasil['pulang'] ?? false;
         aktifIjin = hasil['ijin'] ?? false;
+        jadwalNama = hasil['nama'];
+        jadwalJam = hasil['jam'];
+        jadwalKeterangan = hasil['keterangan'];
       });
     } catch (e) {
       print('Gagal memvalidasi tombol absensi: $e');
     }
   }
 
-  Future<void> _showCameraModal() async {
+  Future<void> _showCameraModal(AbsensiJenis jenis) async {
     await _requestCameraPermission();
+    _sedangSubmitAbsensi = true;
 
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.camera);
 
     if (pickedFile != null) {
       final originalFile = File(pickedFile.path);
-
-      // ⬇️ Kompres dan resize gambar dulu
       final file = await _compressAndResizeImage(originalFile);
 
       if (file == null) {
@@ -501,15 +627,20 @@ class _AbsensiPageState extends State<AbsensiPage> {
           actions: [
             CupertinoDialogAction(
               child: const Text("Batal"),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                Navigator.pop(context);
+                _sedangSubmitAbsensi = false;
+              },
             ),
             CupertinoDialogAction(
               isDefaultAction: true,
               child: const Text("Submit"),
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(context);
                 // _submitAbsensi(file, lat, long);
-                _submitAbsensi(file, lat, long, AbsensiJenis.berangkat);
+                await _submitAbsensi(file, lat, long, jenis);
+                await _refreshLocation();
+                _sedangSubmitAbsensi = false;
               },
             ),
           ],
@@ -561,7 +692,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
     );
 
     try {
-      final result = await ApiService.kirimAbsensi(
+      final result = await ApiService.kirimAbsensiBerangkat(
         id_user: widget.id_user.toString(),
         nip: widget.nip,
         imageFile: file,
@@ -588,36 +719,50 @@ class _AbsensiPageState extends State<AbsensiPage> {
           ),
         );
 
-        showCupertinoDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) {
-            Future.delayed(const Duration(seconds: 3), () {
-              if (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-              }
-            });
-            return CupertinoAlertDialog(
-              title: const Text("Yeayy!! Kamu Hebat!"),
-              content: Text(result['message']),
-            );
-          },
-        );
+        // showCupertinoDialog(
+        //   context: context,
+        //   barrierDismissible: false,
+        //   builder: (_) {
+        //     Future.delayed(const Duration(seconds: 3), () {
+        //       if (Navigator.of(context).canPop()) {
+        //         Navigator.of(context).pop();
+        //       }
+        //     });
+        //     return CupertinoAlertDialog(
+        //       title: const Text("Yeayy!! Kamu Hebat!"),
+        //       content: Text(result['message']),
+        //     );
+        //   },
+        // );
       } else {
-        showCupertinoDialog(
-          context: context,
-          builder: (_) => CupertinoAlertDialog(
-            title: Text('Gagal Absensi - Code ${result['code']}'),
-            content: Text(result['message']),
-            actions: [
-              CupertinoDialogAction(
-                isDefaultAction: true,
-                child: const Text('OK'),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
+        await flutterLocalNotificationsPlugin.show(
+          0,
+          'Ah Maaf!! Kode Error ${result['code']}!',
+          result['message'],
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'absen_channel',
+              'Notifikasi E-Absensi',
+              channelDescription: 'Notifikasi gagal proses absensi',
+              importance: Importance.max,
+              priority: Priority.high,
+            ),
           ),
         );
+        // showCupertinoDialog(
+        //   context: context,
+        //   builder: (_) => CupertinoAlertDialog(
+        //     title: Text('Gagal Absensi - Code ${result['code']}'),
+        //     content: Text(result['message']),
+        //     actions: [
+        //       CupertinoDialogAction(
+        //         isDefaultAction: true,
+        //         child: const Text('Tutup'),
+        //         onPressed: () => Navigator.pop(context),
+        //       ),
+        //     ],
+        //   ),
+        // );
       }
     } catch (e) {
       if (context.mounted) Navigator.pop(context); // Tutup loading
@@ -654,11 +799,12 @@ class _AbsensiPageState extends State<AbsensiPage> {
       ),
       child: CupertinoPageScaffold(
         child: SafeArea(
-          top: false,
+          top: false, // FULL top IF false
           bottom: false,
           child: Stack(
             children: [
               FlutterMap(
+                mapController: mapController,
                 options: MapOptions(
                   center: _position != null
                       ? LatLng(_position!.latitude, _position!.longitude)
@@ -775,6 +921,33 @@ class _AbsensiPageState extends State<AbsensiPage> {
                 ],
               ),
 
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 12,
+                right: 16,
+                child: GestureDetector(
+                  onTap: _isRefreshingLocation ? null : _refreshLocation,
+                  child: Container(
+                    width: 45,
+                    height: 45,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(color: Colors.black26, blurRadius: 4),
+                      ],
+                    ),
+                    child: Center(
+                      child: _isRefreshingLocation
+                          ? const CupertinoActivityIndicator(radius: 10)
+                          : const Icon(
+                              CupertinoIcons.location_solid,
+                              color: CupertinoColors.activeBlue,
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+
               if (_izinLokasiDitolak)
                 Positioned(
                   top: MediaQuery.of(context).padding.top + 12,
@@ -874,7 +1047,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
                               const SizedBox(width: 6),
                               Text(
                                 _position != null
-                                    ? "Akurat sejauh ${_position!.accuracy.toStringAsFixed(0)} m"
+                                    ? "Akurasi GPS sejauh ${_position!.accuracy.toStringAsFixed(0)} m${_isMocked ? " ⚠️ Fake GPS" : ""}"
                                     : "-",
                               ),
                             ],
@@ -953,7 +1126,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
                                   (_position != null &&
                                       !_izinLokasiDitolak &&
                                       aktifPulang)
-                                  ? () => _showCameraModal()
+                                  ? () => _showCameraModal(AbsensiJenis.pulang)
                                   : null,
                               child: const Text(
                                 "PULANG",
@@ -974,7 +1147,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
                                   (_position != null &&
                                       !_izinLokasiDitolak &&
                                       aktifIjin)
-                                  ? () => _showCameraModal()
+                                  ? () => _showCameraModal(AbsensiJenis.ijin)
                                   : null,
                               child: const Text(
                                 "IJIN",
@@ -995,7 +1168,8 @@ class _AbsensiPageState extends State<AbsensiPage> {
                                   (_position != null &&
                                       !_izinLokasiDitolak &&
                                       aktifBerangkat)
-                                  ? () => _showCameraModal()
+                                  ? () =>
+                                        _showCameraModal(AbsensiJenis.berangkat)
                                   : null,
 
                               child: const Text(
