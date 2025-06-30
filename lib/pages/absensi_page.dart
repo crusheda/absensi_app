@@ -41,6 +41,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
   bool _notifikasiFakeGpsSudahDikirim = false;
   bool isTombolAktif = false;
   bool _sudahValidasiAwal = false;
+  bool _alreadyInitialized = false;
   bool aktifBerangkat = false;
   bool aktifPulang = false;
   bool aktifIjin = false;
@@ -351,6 +352,8 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
   }
 
   Future<void> _initializeAsync() async {
+    if (_alreadyInitialized) return;
+    _alreadyInitialized = true;
     await _initNotification();
 
     final notifStatus = await _requestNotificationPermission();

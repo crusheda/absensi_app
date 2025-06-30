@@ -1,11 +1,11 @@
 import 'package:flutter/cupertino.dart';
-import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:flutter/material.dart' show Icons;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import '../services/api_service.dart';
+import 'detail_rekap_absensi_page.dart';
 
 class DataModel {
   final String label;
@@ -15,6 +15,7 @@ class DataModel {
 
 class RiwayatModel {
   final IconData icon;
+  final int idAbsensi;
   final String shift;
   final String waktu;
   final int jenis;
@@ -24,6 +25,7 @@ class RiwayatModel {
 
   RiwayatModel({
     required this.icon,
+    required this.idAbsensi,
     required this.shift,
     required this.waktu,
     required this.jenis,
@@ -35,6 +37,7 @@ class RiwayatModel {
   factory RiwayatModel.fromJson(Map<String, dynamic> json) {
     return RiwayatModel(
       icon: CupertinoIcons.sun_max,
+      idAbsensi: json['id'] ?? '-',
       shift: json['nm_shift'] ?? '-',
       waktu: json['tgl_in'] ?? '-',
       jenis: json['jenis'] ?? 0,
@@ -242,28 +245,6 @@ class _RekapPageState extends State<RekapPage> {
       child: SafeArea(
         child: Column(
           children: [
-            // const SizedBox(height: 16),
-            // Padding(
-            //   padding: const EdgeInsets.symmetric(horizontal: 16),
-            //   child: SizedBox(
-            //     height: 200,
-            //     child: SfCartesianChart(
-            //       primaryXAxis: CategoryAxis(),
-            //       primaryYAxis: NumericAxis(),
-            //       series: <CartesianSeries>[
-            //         ColumnSeries<DataModel, String>(
-            //           dataSource: chartData,
-            //           xValueMapper: (d, _) => d.label,
-            //           yValueMapper: (d, _) => d.value,
-            //           dataLabelSettings: const DataLabelSettings(
-            //             isVisible: true,
-            //           ),
-            //         ),
-            //       ],
-            //     ),
-            //   ),
-            // ),
-            // const SizedBox(height: 12),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
@@ -316,6 +297,7 @@ class _RekapPageState extends State<RekapPage> {
             ),
 
             const SizedBox(height: 12),
+
             Expanded(
               child: (riwayat?.isEmpty ?? true)
                   ? const Center(
@@ -338,7 +320,24 @@ class _RekapPageState extends State<RekapPage> {
                           padding: const EdgeInsets.all(12),
                           color: CupertinoColors.systemGrey6,
                           borderRadius: BorderRadius.circular(12),
-                          onPressed: () {},
+                          onPressed: () async {
+                            showCupertinoDialog(
+                              context: context,
+                              builder: (_) => const CupertinoAlertDialog(
+                                content: CupertinoActivityIndicator(),
+                              ),
+                            );
+                            await Future.delayed(Duration(milliseconds: 300));
+                            Navigator.pop(context); // close dialog
+                            Navigator.of(context).push(
+                              CupertinoPageRoute(
+                                builder: (context) => DetailRekapAbsensiPage(
+                                  idAbsensi: item.idAbsensi,
+                                ),
+                              ),
+                            );
+                          },
+
                           child: Row(
                             children: [
                               Icon(
