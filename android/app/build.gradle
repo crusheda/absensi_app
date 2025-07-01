@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace 'com.example.absensi_app'
+    namespace 'com.sakudewa.absensi'
     compileSdkVersion flutter.compileSdkVersion
     ndkVersion '27.0.12077973'
 
@@ -20,16 +20,35 @@ android {
     }
 
     defaultConfig {
-        applicationId 'com.example.absensi_app'
+        applicationId 'com.sakudewa.absensi'
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutter.versionCode
         versionName flutter.versionName
     }
 
+    signingConfigs {
+        release {
+            // Ambil properti dari file keystore eksternal
+            def keystoreProperties = new Properties()
+            def keystorePropertiesFile = rootProject.file("key.properties")
+            if (keystorePropertiesFile.exists()) {
+                keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+            }
+
+            storeFile file(keystoreProperties['storeFile'])
+            storePassword keystoreProperties['storePassword']
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
+            shrinkResources true
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
