@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../services/api_service.dart';
 import 'fullscreen_image_viewer.dart';
+import 'package:shimmer/shimmer.dart';
 
 class DetailRekapAbsensiPage extends StatefulWidget {
   final int idAbsensi;
@@ -18,6 +19,32 @@ class DetailRekapAbsensiPage extends StatefulWidget {
 class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
   Map<String, dynamic>? absensiDetail;
   bool isLoading = true;
+
+  String _getJenisLabel(String jenis) {
+    switch (jenis) {
+      case '1':
+        return 'Masuk Jaga Shift';
+      case '2':
+        return 'Tidak Diketahui!';
+      case '3':
+        return 'Ijin/Tidak Masuk';
+      default:
+        return 'Tidak Diketahui!';
+    }
+  }
+
+  Color _getJenisColor(String jenis) {
+    switch (jenis) {
+      case '1':
+        return CupertinoColors.systemIndigo;
+      case '2':
+        return CupertinoColors.activeGreen;
+      case '3':
+        return CupertinoColors.activeOrange;
+      default:
+        return CupertinoColors.systemGrey;
+    }
+  }
 
   @override
   void initState() {
@@ -41,6 +68,49 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
         isLoading = false;
       });
     }
+  }
+
+  Widget _buildIdBadge(int id) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(255, 87, 87, 87),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        'ID#$id',
+        style: const TextStyle(
+          decoration: TextDecoration.none,
+          fontFamily: 'Poppins',
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          color: CupertinoColors.systemGrey4,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildJenisBadge(String jenis) {
+    final label = _getJenisLabel(jenis);
+    final color = _getJenisColor(jenis);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          decoration: TextDecoration.none,
+          fontFamily: 'Poppins',
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          color: color,
+        ),
+      ),
+    );
   }
 
   Widget _buildLeafletMap(String latlong) {
@@ -82,11 +152,19 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
   Widget _buildCupertinoBox({
     required String latlong,
     required String title,
+    String? shift,
     required String date,
     required String time,
-    required String info,
+    required int jenis,
+    String? infoTitle1,
+    String? infoValue1,
+    String? infoTitle2,
+    String? infoValue2,
+    String? lemburTitle,
+    String? lemburValue,
     Color titleColor = CupertinoColors.black,
   }) {
+    print('jenis: ${absensiDetail!['jenis']}');
     return Container(
       decoration: BoxDecoration(
         color: CupertinoColors.systemGrey6,
@@ -110,15 +188,37 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: CupertinoColors.black,
+                    color: titleColor,
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                if (shift != null && shift.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Icon(CupertinoIcons.bell, size: 16),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          shift,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: CupertinoColors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
+                const SizedBox(height: 10),
                 Row(
                   children: [
                     const Icon(CupertinoIcons.calendar, size: 16),
@@ -158,24 +258,133 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
                   ],
                 ),
 
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    const Icon(CupertinoIcons.time, size: 16),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        "$info WIB",
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: CupertinoColors.systemGrey,
+                if (infoValue1 != null && infoValue1.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Icon(CupertinoIcons.timer, size: 16),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text.rich(
+                          TextSpan(
+                            text: "$infoTitle1 ",
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: CupertinoColors.black,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: infoValue1,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
+
+                if (infoValue2 != null && infoValue2.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Icon(CupertinoIcons.stopwatch, size: 16),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text.rich(
+                          TextSpan(
+                            text: "$infoTitle2 ",
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: CupertinoColors.black,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: infoValue2,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
+                if (lemburValue != null && lemburValue.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Icon(CupertinoIcons.metronome, size: 16),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text.rich(
+                          TextSpan(
+                            text: "$lemburTitle ",
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: CupertinoColors.black,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: lemburValue,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildKeteranganBox(String keterangan) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemGrey6,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Text(
+            "Keterangan Absensi :",
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: CupertinoColors.black,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            keterangan.isNotEmpty ? keterangan : "-",
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 14,
+              color: CupertinoColors.black,
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -232,6 +441,35 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
               height: 150,
               width: double.infinity,
               fit: BoxFit.cover,
+              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                if (wasSynchronouslyLoaded || frame != null) {
+                  return child;
+                } else {
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Shimmer.fromColors(
+                        baseColor: CupertinoColors.systemGrey4,
+                        highlightColor: CupertinoColors.systemGrey6,
+                        child: Container(
+                          height: 150,
+                          width: double.infinity,
+                          color: CupertinoColors.systemGrey4,
+                        ),
+                      ),
+                      const Text(
+                        "Memuat Foto...",
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: CupertinoColors.systemGrey,
+                        ),
+                      ),
+                    ],
+                  );
+                }
+              },
               errorBuilder: (context, error, stackTrace) =>
                   const Icon(CupertinoIcons.photo),
             ),
@@ -253,54 +491,82 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
             ? const Center(child: CupertinoActivityIndicator())
             : absensiDetail == null
             ? const Center(child: Text('Gagal memuat data'))
-            : Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                child: ListView(
-                  children: [
-                    _buildCupertinoBox(
-                      latlong: absensiDetail!['latlong_in'] ?? '',
-                      title: "Berangkat",
-                      date: absensiDetail!['tgl_in'] ?? '-',
-                      time: absensiDetail!['jam_in'] ?? '-',
-                      info:
-                          "Keterlambatan: \n${absensiDetail!['terlambat'] ?? '-'}",
-                      titleColor: CupertinoColors.activeGreen,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildCupertinoBox(
-                      latlong: absensiDetail!['latlong_out'] ?? '',
-                      title: "Pulang",
-                      date: absensiDetail!['tgl_out'] ?? '-',
-                      time: absensiDetail!['jam_out'] ?? '-',
-                      info:
-                          "Bekerja selama: \n${absensiDetail!['durasi_kerja'] ?? '-'}",
-                      titleColor: CupertinoColors.destructiveRed,
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
+            : Column(
+                children: [
+                  // BADGE DI ATAS
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Expanded(
-                          child: _buildMiniPhotoBox(
-                            "Absensi Berangkat",
-                            absensiDetail!['foto_in'],
-                            0,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildMiniPhotoBox(
-                            "Absensi Pulang",
-                            absensiDetail!['foto_out'],
-                            1,
-                          ),
-                        ),
+                        _buildIdBadge(absensiDetail!['id'] ?? 0),
+                        const SizedBox(width: 8),
+                        _buildJenisBadge(absensiDetail!['jenis'].toString()),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  // ISI KONTEN (dibungkus Expanded agar scrollable)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      child: ListView(
+                        children: [
+                          _buildCupertinoBox(
+                            latlong: absensiDetail!['latlong_in'] ?? '',
+                            title: "Berangkat",
+                            shift: "Jaga ${absensiDetail!['shift'] ?? ''}",
+                            date: absensiDetail!['tgl_in'] ?? '-',
+                            time: absensiDetail!['jam_in'] ?? '-',
+                            infoTitle1: "Keterlambatan:\n",
+                            infoValue1: absensiDetail!['terlambat'] ?? '-',
+                            titleColor: CupertinoColors.activeGreen,
+                            jenis: absensiDetail!['jenis'] ?? '',
+                          ),
+                          const SizedBox(height: 16),
+                          _buildCupertinoBox(
+                            latlong: absensiDetail!['latlong_out'] ?? '',
+                            title: "Pulang",
+                            date: absensiDetail!['tgl_out'] ?? '-',
+                            time: absensiDetail!['jam_out'] ?? '-',
+                            titleColor: CupertinoColors.destructiveRed,
+                            jenis: absensiDetail!['jenis'] ?? '',
+                            infoTitle2: "Bekerja selama:\n",
+                            infoValue2: absensiDetail!['durasi_kerja'] ?? '-',
+                            lemburTitle: "Lembur selama:\n",
+                            lemburValue: absensiDetail!['lembur'] ?? '',
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildMiniPhotoBox(
+                                  "Foto Berangkat",
+                                  absensiDetail!['foto_in'],
+                                  0,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildMiniPhotoBox(
+                                  "Foto Pulang",
+                                  absensiDetail!['foto_out'],
+                                  1,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          _buildKeteranganBox(
+                            absensiDetail!['keterangan'] ?? '',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
       ),
     );

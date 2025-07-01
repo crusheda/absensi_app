@@ -198,11 +198,21 @@ class _LoginPageState extends State<LoginPage> {
 
                 SizedBox(
                   width: double.infinity,
-                  child: CupertinoButton.filled(
+                  child: CupertinoButton(
+                    color: CupertinoColors
+                        .activeBlue, // Ganti dengan warna yang kamu mau
+                    disabledColor:
+                        CupertinoColors.inactiveGray, // Jika tombol disabled
                     onPressed: isLoading ? null : login,
                     child: isLoading
                         ? const CupertinoActivityIndicator()
-                        : const Text("MASUK"),
+                        : const Text(
+                            "MASUK",
+                            style: TextStyle(
+                              color: Color.fromARGB(255, 255, 255, 255),
+                              fontSize: 14,
+                            ),
+                          ),
                   ),
                 ),
               ],

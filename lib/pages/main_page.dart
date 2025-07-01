@@ -29,6 +29,16 @@ class _MainPageState extends State<MainPage> {
   int currentIndex = 0;
 
   @override
+  void initState() {
+    super.initState();
+    MainPageController.changeTab = (int index) {
+      setState(() {
+        currentIndex = index;
+      });
+    };
+  }
+
+  @override
   Widget build(BuildContext context) {
     final pages = [
       DashboardPage(
@@ -85,4 +95,8 @@ class _MainPageState extends State<MainPage> {
       ),
     );
   }
+}
+
+class MainPageController {
+  static Function(int index)? changeTab;
 }

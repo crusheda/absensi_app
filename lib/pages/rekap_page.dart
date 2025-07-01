@@ -1,5 +1,5 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show Icons;
+import 'package:flutter/material.dart' show Icons, showDialog;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
@@ -62,6 +62,8 @@ class _RekapPageState extends State<RekapPage> {
   int tepatWaktu = 0;
   int terlambat = 0;
   int absenone = 0;
+  late ScrollController _scrollController;
+  bool showBackToTopButton = false;
 
   final List<DataModel> chartData = [
     DataModel('Mei', 5),
@@ -103,6 +105,20 @@ class _RekapPageState extends State<RekapPage> {
     super.initState();
     filterOptions = getFilterOptions();
     fetchRiwayat();
+    _scrollController = ScrollController()
+      ..addListener(() {
+        if (_scrollController.offset >= 400 && !showBackToTopButton) {
+          setState(() => showBackToTopButton = true);
+        } else if (_scrollController.offset < 400 && showBackToTopButton) {
+          setState(() => showBackToTopButton = false);
+        }
+      });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> fetchRiwayat() async {
@@ -243,191 +259,271 @@ class _RekapPageState extends State<RekapPage> {
         middle: Text('Rekapitulasi Absensi'),
       ),
       child: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: const [
-                  Icon(
-                    CupertinoIcons.arrowtriangle_down_circle,
-                    size: 16,
-                    color: CupertinoColors.systemGrey,
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    "Data diurutkan dari absensi terakhir",
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: CupertinoColors.systemGrey,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            _buildFilterPicker(context),
-
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  _buildStatBox(
-                    "Tepat Waktu",
-                    "${tepatWaktu}x",
-                    CupertinoColors.activeGreen,
-                  ),
-                  const SizedBox(width: 8),
-                  _buildStatBox(
-                    "Terlambat",
-                    "${terlambat}x",
-                    CupertinoColors.systemRed,
-                  ),
-                  const SizedBox(width: 8),
-                  _buildStatBox(
-                    "Absen 1x",
-                    "${absenone}x",
-                    CupertinoColors.systemOrange,
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            Expanded(
-              child: (riwayat?.isEmpty ?? true)
-                  ? const Center(
-                      child: Text(
-                        "Data Absensi tidak ada",
+            Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: const [
+                      Icon(
+                        CupertinoIcons.arrowtriangle_down_circle,
+                        size: 16,
+                        color: CupertinoColors.systemGrey,
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        "Data diurutkan dari absensi terakhir",
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 13,
                           color: CupertinoColors.systemGrey,
-                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                    )
-                  : ListView.separated(
-                      itemCount: riwayat.length,
-                      padding: const EdgeInsets.all(16),
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemBuilder: (context, index) {
-                        final item = riwayat[index];
-                        return CupertinoButton(
-                          padding: const EdgeInsets.all(12),
-                          color: CupertinoColors.systemGrey6,
-                          borderRadius: BorderRadius.circular(12),
-                          onPressed: () async {
-                            showCupertinoDialog(
-                              context: context,
-                              builder: (_) => const CupertinoAlertDialog(
-                                content: CupertinoActivityIndicator(),
-                              ),
-                            );
-                            await Future.delayed(Duration(milliseconds: 300));
-                            Navigator.pop(context); // close dialog
-                            Navigator.of(context).push(
-                              CupertinoPageRoute(
-                                builder: (context) => DetailRekapAbsensiPage(
-                                  idAbsensi: item.idAbsensi,
-                                ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                _buildFilterPicker(context),
+
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      _buildStatBox(
+                        "Tepat Waktu",
+                        "${tepatWaktu}x",
+                        CupertinoColors.activeGreen,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildStatBox(
+                        "Terlambat",
+                        "${terlambat}x",
+                        CupertinoColors.systemRed,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildStatBox(
+                        "Absen 1x",
+                        "${absenone}x",
+                        CupertinoColors.systemOrange,
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                Expanded(
+                  child: (riwayat?.isEmpty ?? true)
+                      ? const Center(
+                          child: Text(
+                            "Data Absensi tidak ada",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: CupertinoColors.systemGrey,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          controller: _scrollController,
+                          itemCount: riwayat.length,
+                          padding: const EdgeInsets.all(16),
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 8),
+                          itemBuilder: (context, index) {
+                            final item = riwayat[index];
+
+                            IconData iconData = CupertinoIcons.question;
+                            Color iconColor = CupertinoColors.systemGrey;
+
+                            if (item.jenis == 1) {
+                              if (item.tglOut == null && item.terlambat == 0) {
+                                iconData = CupertinoIcons.cloud_sun;
+                                iconColor = CupertinoColors.systemOrange;
+                              } else if (item.tglOut == null &&
+                                  item.terlambat == 1) {
+                                iconData = CupertinoIcons.cloud_sun;
+                                iconColor = CupertinoColors.systemRed;
+                              } else if (item.tglOut != null &&
+                                  item.terlambat == 0) {
+                                iconData = CupertinoIcons.sun_max;
+                                iconColor = CupertinoColors.systemBlue;
+                              } else if (item.tglOut != null &&
+                                  item.terlambat == 1) {
+                                iconData = CupertinoIcons.sun_max;
+                                iconColor = CupertinoColors.systemRed;
+                              }
+                            } else if (item.jenis == 3) {
+                              iconData = CupertinoIcons.flag;
+                              iconColor = CupertinoColors.activeGreen;
+                            }
+
+                            return CupertinoButton(
+                              padding: const EdgeInsets.all(12),
+                              color: CupertinoColors.systemGrey6,
+                              borderRadius: BorderRadius.circular(12),
+                              onPressed: () async {
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (_) => Center(
+                                    child: Container(
+                                      padding: const EdgeInsets.all(20),
+                                      decoration: BoxDecoration(
+                                        color: CupertinoColors.systemGrey6,
+                                        borderRadius: BorderRadius.circular(16),
+                                        boxShadow: const [
+                                          BoxShadow(
+                                            color: CupertinoColors.systemGrey,
+                                            blurRadius: 10,
+                                            offset: Offset(0, 3),
+                                          ),
+                                        ],
+                                      ),
+                                      width: 70, // ✅ diperkecil
+                                      height: 70, // ✅ diperkecil
+                                      child: const CupertinoActivityIndicator(
+                                        radius: 12, // ✅ diperkecil dari 16
+                                      ),
+                                    ),
+                                  ),
+                                );
+
+                                await Future.delayed(
+                                  const Duration(milliseconds: 500),
+                                );
+
+                                if (context.mounted) Navigator.pop(context);
+
+                                // Navigasi ke halaman detail
+                                Navigator.of(context).push(
+                                  CupertinoPageRoute(
+                                    builder: (context) =>
+                                        DetailRekapAbsensiPage(
+                                          idAbsensi: item.idAbsensi,
+                                        ),
+                                  ),
+                                );
+                              },
+
+                              child: Row(
+                                children: [
+                                  Icon(iconData, color: iconColor),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text.rich(
+                                          TextSpan(
+                                            children: [
+                                              if (item.jenis == 1) ...[
+                                                TextSpan(
+                                                  text: "Shift ${item.shift} ",
+                                                  style: const TextStyle(
+                                                    fontSize: 15,
+                                                    color: Color(0xFF2E2E2E),
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                                if (item.terlambat == 1 &&
+                                                    item.tglOut != null)
+                                                  const TextSpan(
+                                                    text: "(Terlambat)",
+                                                    style: TextStyle(
+                                                      color: CupertinoColors
+                                                          .systemRed,
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                    ),
+                                                  )
+                                                else if (item.tglOut == null)
+                                                  const TextSpan(
+                                                    text: "(Absen 1x)",
+                                                    style: TextStyle(
+                                                      color: CupertinoColors
+                                                          .systemYellow,
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                    ),
+                                                  )
+                                                else if (item.terlambat == 0 &&
+                                                    item.tglIn != null &&
+                                                    item.tglOut != null)
+                                                  const TextSpan(
+                                                    text: "(Tepat Waktu)",
+                                                    style: TextStyle(
+                                                      color: CupertinoColors
+                                                          .activeGreen,
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                    ),
+                                                  ),
+                                              ] else if (item.jenis == 3) ...[
+                                                const TextSpan(
+                                                  text: "Ijin / Tidak Masuk",
+                                                  style: TextStyle(
+                                                    fontSize: 15,
+                                                    color: Color(0xFF2E2E2E),
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          formatTanggal(item.tglIn) ?? '-',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: CupertinoColors.systemGrey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(
+                                    CupertinoIcons.chevron_forward,
+                                    color: Color(0xFF2E2E2E),
+                                  ),
+                                ],
                               ),
                             );
                           },
-
-                          child: Row(
-                            children: [
-                              Icon(
-                                CupertinoIcons.sun_max,
-                                color: CupertinoColors.systemBlue,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text.rich(
-                                      TextSpan(
-                                        children: [
-                                          if (item.jenis == 1) ...[
-                                            TextSpan(
-                                              text: "Shift ${item.shift} ",
-                                              style: const TextStyle(
-                                                fontSize: 15,
-                                                color: Color(0xFF2E2E2E),
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                            if (item.terlambat == 1 &&
-                                                item.tglOut != null)
-                                              const TextSpan(
-                                                text: "(Terlambat)",
-                                                style: TextStyle(
-                                                  color:
-                                                      CupertinoColors.systemRed,
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              )
-                                            else if (item.tglOut == null)
-                                              const TextSpan(
-                                                text: "(Absen 1x)",
-                                                style: TextStyle(
-                                                  color: CupertinoColors
-                                                      .systemYellow,
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              )
-                                            else if (item.terlambat == 0 &&
-                                                item.tglIn != null &&
-                                                item.tglOut != null)
-                                              const TextSpan(
-                                                text: "(Tepat Waktu)",
-                                                style: TextStyle(
-                                                  color: CupertinoColors
-                                                      .activeGreen,
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                          ] else if (item.jenis == 3) ...[
-                                            const TextSpan(
-                                              text: "Ijin / Tidak Masuk",
-                                              style: TextStyle(
-                                                fontSize: 15,
-                                                color: Color(0xFF2E2E2E),
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      formatTanggal(item.tglIn) ?? '-',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: CupertinoColors.systemGrey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Icon(
-                                CupertinoIcons.chevron_forward,
-                                color: Color(0xFF2E2E2E),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
+                        ),
+                ),
+              ],
             ),
+            if (showBackToTopButton)
+              Positioned(
+                bottom: 24,
+                right: 24,
+                child: CupertinoButton(
+                  padding: const EdgeInsets.all(10),
+                  color: CupertinoColors.systemGrey,
+                  borderRadius: BorderRadius.circular(30),
+                  child: const Icon(
+                    CupertinoIcons.arrow_up,
+                    color: CupertinoColors.white,
+                  ),
+                  onPressed: () {
+                    _scrollController.animateTo(
+                      0,
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeOut,
+                    );
+                  },
+                ),
+              ),
           ],
         ),
       ),

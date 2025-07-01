@@ -10,8 +10,8 @@ import 'pages/splash_page.dart';
 
 void main() async {
   Intl.defaultLocale = 'id_ID';
-  WidgetsFlutterBinding.ensureInitialized(); // ⬅️ WAJIB: untuk async di main()
-  await initializeDateFormatting('id', null); // ⬅️ Inisialisasi locale "id"
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('id', null);
   runApp(const MyApp());
 }
 
@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   Future<Widget> _getInitialPage() async {
-    await Future.delayed(const Duration(seconds: 2)); // ⏱️ Splash duration
+    await Future.delayed(const Duration(seconds: 2));
 
     final prefs = await SharedPreferences.getInstance();
     final id_user = prefs.getInt('id_user');
@@ -31,10 +31,10 @@ class MyApp extends StatelessWidget {
 
     if (id_user != null && token != null && nama != null && nip != null) {
       return MainPage(
-        id_user: id_user!,
+        id_user: id_user,
         name: name ?? '',
-        nama: nama ?? '',
-        nip: nip ?? '',
+        nama: nama,
+        nip: nip,
         fotoProfil: foto ?? '',
       );
     } else {
@@ -48,10 +48,7 @@ class MyApp extends StatelessWidget {
       title: 'E-Absensi',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(primarySwatch: Colors.blue),
-      supportedLocales: const [
-        Locale('id', 'ID'), // Bahasa Indonesia
-        Locale('en', 'US'), // English (fallback)
-      ],
+      supportedLocales: const [Locale('id', 'ID'), Locale('en', 'US')],
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,

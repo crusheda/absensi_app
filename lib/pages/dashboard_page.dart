@@ -7,6 +7,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import '../services/api_service.dart';
 import '../models/dashboard_data.dart';
+import 'main_page.dart';
+import 'jadwal_page.dart';
+import 'package:absensi_app/pages/rekap_page.dart'; // ganti sesuai path kamu
 import 'dart:convert';
 
 class DashboardPage extends StatefulWidget {
@@ -32,6 +35,8 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   DashboardData? dashboard;
   late Timer _timer;
+  bool isError = false;
+  bool isRetrying = false;
   String _currentTime = "";
 
   String formatTanggalIndonesia(String? tanggal) {
@@ -68,16 +73,33 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _loadDashboard() async {
+    setState(() {
+      isError = false;
+      isRetrying = true;
+    });
+
     final url = '${ApiService.baseUrl}/dashboard/${widget.id_user}';
-    final response = await http.get(Uri.parse(url));
-    if (response.statusCode == 200) {
-      final jsonMap = json.decode(response.body);
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final jsonMap = json.decode(response.body);
+        setState(() {
+          dashboard = DashboardData.fromJson(jsonMap);
+          isError = false;
+        });
+      } else {
+        setState(() {
+          isError = true;
+        });
+      }
+    } catch (e) {
       setState(() {
-        dashboard = DashboardData.fromJson(jsonMap);
+        isError = true;
       });
-    } else {
-      // tangani error
-      print('Gagal ambil data');
+    } finally {
+      setState(() {
+        isRetrying = false;
+      });
     }
   }
 
@@ -105,8 +127,57 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     if (dashboard == null) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: isError
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    "Data API Gagal dimuat.",
+                    style: TextStyle(
+                      color: Color.fromARGB(255, 0, 0, 0),
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  isRetrying
+                      ? const CupertinoActivityIndicator()
+                      : CupertinoButton.filled(
+                          color: CupertinoColors.activeBlue,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                          onPressed: _loadDashboard,
+                          child: const Text("Muat Ulang"),
+                        ),
+                ],
+              )
+            : const CupertinoActivityIndicator(),
+      );
     }
+
+    if (isError) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'Gagal memproses Data API Dashboard.',
+              style: TextStyle(color: CupertinoColors.systemRed),
+            ),
+            const SizedBox(height: 8),
+            CupertinoButton(
+              color: CupertinoColors.activeBlue,
+              onPressed: _loadDashboard,
+              child: const Text("Muat Ulang"),
+            ),
+          ],
+        ),
+      );
+    }
+
     final bool isFotoAda = widget.fotoProfil.trim().isNotEmpty;
     final fotoUrl = isFotoAda
         ? '${ApiService.simrsUrl}/storage/${widget.fotoProfil.replaceFirst('public/', '')}'
@@ -209,7 +280,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             ),
                           ),
                           Text(
-                            DateFormat('d', 'id_ID').format(DateTime.now()),
+                            DateFormat('dd', 'id_ID').format(DateTime.now()),
                             style: const TextStyle(
                               color: CupertinoColors.activeBlue,
                               fontSize: 20,
@@ -370,7 +441,9 @@ class _DashboardPageState extends State<DashboardPage> {
                         CupertinoButton(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           color: const Color.fromARGB(255, 71, 71, 71),
-                          onPressed: () {},
+                          onPressed: () {
+                            MainPageController.changeTab?.call(1);
+                          },
                           child: const Text(
                             "LIHAT",
                             style: TextStyle(
@@ -450,7 +523,11 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
       child: CupertinoButton(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        onPressed: () {},
+        onPressed: () {
+          if (title == "Riwayat Absensi") {
+            MainPageController.changeTab?.call(3); // Pindah ke tab Rekap
+          }
+        },
         child: Row(
           children: [
             Icon(icon, color: color),
