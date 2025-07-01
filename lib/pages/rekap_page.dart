@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import '../services/api_service.dart';
-import 'detail_rekap_absensi_page.dart';
+import 'rekap_detail_page.dart';
 
 class DataModel {
   final String label;
