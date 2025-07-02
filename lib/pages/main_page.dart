@@ -48,7 +48,7 @@ class _MainPageState extends State<MainPage> {
         nip: widget.nip,
         fotoProfil: widget.fotoProfil,
       ),
-      JadwalPage(),
+      JadwalPage(id_user: widget.id_user),
       AbsensiPage(id_user: widget.id_user, nip: widget.nip),
       RekapPage(id_user: widget.id_user),
       SettingPage(

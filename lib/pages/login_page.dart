@@ -50,7 +50,9 @@ class _LoginPageState extends State<LoginPage> {
         context: context,
         builder: (_) => CupertinoAlertDialog(
           title: const Text("Login Gagal"),
-          content: Text(result['message']),
+          content: Text(
+            'Mohon Pastikan kombinasi Username dan Password karyawan sudah sesuai. Lebih Lanjut silakan hubungi Admin.',
+          ), // Text(result['message'])
           actions: [
             CupertinoDialogAction(
               child: const Text("Tutup"),
@@ -175,27 +177,26 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 30),
 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
-                    Text(
-                      "Butuh Bantuan?",
-                      style: TextStyle(
-                        color: CupertinoColors.activeBlue,
-                        fontSize: 14,
-                      ),
-                    ),
-                    Text(
-                      "Lupa Password",
-                      style: TextStyle(
-                        color: CupertinoColors.activeBlue,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 30),
-
+                // Row(
+                //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                //   children: const [
+                //     Text(
+                //       "Butuh Bantuan?",
+                //       style: TextStyle(
+                //         color: CupertinoColors.activeBlue,
+                //         fontSize: 14,
+                //       ),
+                //     ),
+                //     Text(
+                //       "Lupa Password",
+                //       style: TextStyle(
+                //         color: CupertinoColors.activeBlue,
+                //         fontSize: 14,
+                //       ),
+                //     ),
+                //   ],
+                // ),
+                // const SizedBox(height: 30),
                 SizedBox(
                   width: double.infinity,
                   child: CupertinoButton(

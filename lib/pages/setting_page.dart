@@ -32,7 +32,7 @@ class SettingPage extends StatelessWidget {
           padding: const EdgeInsets.only(top: 12),
           child: Text(
             "Versi: $versi\nDeveloper: Yussuf Faisal, S.Kom\n\nAplikasi Absensi Pegawai RS PKU Muhammadiyah Sukoharjo berbasis Flutter. "
-            "Dilengkapi fitur GPS, validasi radius kantor, dan selfie kamera saat absen. Aplikasi ini dibuat dengan sepenuh ♥️ untuk dapat dipergunakan dengan semestinya",
+            "Dilengkapi fitur GPS, validasi radius kantor, dan selfie kamera saat absen. Aplikasi ini dibuat dengan sepenuh ♥️.",
             textAlign: TextAlign.justify,
             style: const TextStyle(fontSize: 12),
           ),

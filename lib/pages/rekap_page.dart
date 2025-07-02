@@ -175,17 +175,29 @@ class _RekapPageState extends State<RekapPage> {
       print("Exception: $e");
     } finally {
       setState(() => isLoading = false);
-      _showApiErrorPopup("Periksa koneksi atau hubungi admin.");
+      // _showApiErrorPopup("Periksa koneksi atau hubungi admin.");
     }
   }
 
-  Widget _buildStatBox(String title, String value, Color color) {
+  Widget _buildStatBox(
+    String title,
+    String value,
+    Color color, {
+    bool loading = false,
+  }) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: CupertinoColors.white,
           borderRadius: BorderRadius.circular(12),
+          boxShadow: const [
+            BoxShadow(
+              color: CupertinoColors.systemGrey4,
+              blurRadius: 6,
+              offset: Offset(0, 3),
+            ),
+          ],
         ),
         child: Column(
           children: [
@@ -198,15 +210,17 @@ class _RekapPageState extends State<RekapPage> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 4),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-              textAlign: TextAlign.center,
-            ),
+            loading
+                ? const CupertinoActivityIndicator(radius: 10)
+                : Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
           ],
         ),
       ),
@@ -330,20 +344,23 @@ class _RekapPageState extends State<RekapPage> {
                     children: [
                       _buildStatBox(
                         "Tepat Waktu",
-                        "${tepatWaktu ?? 'x'}x",
+                        "${tepatWaktu}x",
                         CupertinoColors.activeGreen,
+                        loading: isLoading,
                       ),
                       const SizedBox(width: 8),
                       _buildStatBox(
                         "Terlambat",
-                        "${terlambat ?? 'x'}x",
+                        "${terlambat}x",
                         CupertinoColors.systemRed,
+                        loading: isLoading,
                       ),
                       const SizedBox(width: 8),
                       _buildStatBox(
                         "Absen 1x",
-                        "${absenone ?? 'x'}x",
+                        "${absenone}x",
                         CupertinoColors.systemOrange,
+                        loading: isLoading,
                       ),
                     ],
                   ),
@@ -376,87 +393,132 @@ class _RekapPageState extends State<RekapPage> {
                                     const SizedBox(height: 8),
                                 itemBuilder: (context, index) {
                                   final item = riwayat[index];
-                                  // ... builder tetap
-                                  return CupertinoButton(
-                                    padding: const EdgeInsets.all(12),
-                                    color: CupertinoColors.systemGrey6,
-                                    borderRadius: BorderRadius.circular(12),
-                                    onPressed: () async {
-                                      showDialog(
-                                        context: context,
-                                        barrierDismissible: false,
-                                        builder: (_) => Center(
-                                          child: Container(
-                                            padding: const EdgeInsets.all(20),
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  CupertinoColors.systemGrey6,
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                              boxShadow: const [
-                                                BoxShadow(
-                                                  color: CupertinoColors
-                                                      .systemGrey,
-                                                  blurRadius: 10,
-                                                  offset: Offset(0, 3),
+
+                                  IconData iconData;
+                                  Color iconColor;
+                                  String label;
+
+                                  if (item.jenis == 1 &&
+                                      item.terlambat == 0 &&
+                                      item.tglOut != null) {
+                                    iconData =
+                                        CupertinoIcons.check_mark_circled_solid;
+                                    iconColor = CupertinoColors.activeGreen;
+                                    label = "Tepat Waktu";
+                                  } else if (item.jenis == 1 &&
+                                      item.terlambat > 0) {
+                                    iconData = CupertinoIcons.clock_solid;
+                                    iconColor = CupertinoColors.systemRed;
+                                    label = "Terlambat";
+                                  } else if (item.jenis == 1 &&
+                                      item.tglOut == null) {
+                                    iconData = CupertinoIcons
+                                        .exclamationmark_circle_fill;
+                                    iconColor = CupertinoColors.systemOrange;
+                                    label = "Absen 1x";
+                                  } else {
+                                    iconData =
+                                        CupertinoIcons.check_mark_circled_solid;
+                                    iconColor = CupertinoColors.systemYellow;
+                                    label = "Ijin / Tidak Masuk";
+                                  }
+
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      color: CupertinoColors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: CupertinoColors.systemGrey4,
+                                          blurRadius: 6,
+                                          offset: Offset(0, 3),
+                                        ),
+                                      ],
+                                    ),
+                                    child: CupertinoButton(
+                                      padding: const EdgeInsets.all(12),
+                                      borderRadius: BorderRadius.circular(12),
+                                      color: CupertinoColors.white,
+                                      onPressed: () async {
+                                        showDialog(
+                                          context: context,
+                                          barrierDismissible: false,
+                                          builder: (_) => Center(
+                                            child: Container(
+                                              padding: const EdgeInsets.all(20),
+                                              decoration: BoxDecoration(
+                                                color:
+                                                    CupertinoColors.systemGrey6,
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                                boxShadow: const [
+                                                  BoxShadow(
+                                                    color: CupertinoColors
+                                                        .systemGrey,
+                                                    blurRadius: 10,
+                                                    offset: Offset(0, 3),
+                                                  ),
+                                                ],
+                                              ),
+                                              width: 70,
+                                              height: 70,
+                                              child:
+                                                  const CupertinoActivityIndicator(
+                                                    radius: 12,
+                                                  ),
+                                            ),
+                                          ),
+                                        );
+
+                                        await Future.delayed(
+                                          const Duration(milliseconds: 500),
+                                        );
+
+                                        if (context.mounted)
+                                          Navigator.pop(context);
+
+                                        Navigator.of(context).push(
+                                          CupertinoPageRoute(
+                                            builder: (context) =>
+                                                DetailRekapAbsensiPage(
+                                                  idAbsensi: item.idAbsensi,
+                                                ),
+                                          ),
+                                        );
+                                      },
+                                      child: Row(
+                                        children: [
+                                          Icon(iconData, color: iconColor),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  "Shift ${item.shift} • $label",
+                                                  style: TextStyle(
+                                                    color: iconColor,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  formatTanggal(item.tglIn),
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: CupertinoColors
+                                                        .systemGrey,
+                                                  ),
                                                 ),
                                               ],
                                             ),
-                                            width: 70,
-                                            height: 70,
-                                            child:
-                                                const CupertinoActivityIndicator(
-                                                  radius: 12,
-                                                ),
                                           ),
-                                        ),
-                                      );
-
-                                      await Future.delayed(
-                                        const Duration(milliseconds: 500),
-                                      );
-
-                                      if (context.mounted)
-                                        Navigator.pop(context);
-
-                                      Navigator.of(context).push(
-                                        CupertinoPageRoute(
-                                          builder: (context) =>
-                                              DetailRekapAbsensiPage(
-                                                idAbsensi: item.idAbsensi,
-                                              ),
-                                        ),
-                                      );
-                                    },
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          CupertinoIcons.sun_max,
-                                          color: CupertinoColors.systemBlue,
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text("Shift ${item.shift}"),
-                                              Text(
-                                                formatTanggal(item.tglIn),
-                                                style: const TextStyle(
-                                                  fontSize: 12,
-                                                  color: CupertinoColors
-                                                      .systemGrey,
-                                                ),
-                                              ),
-                                            ],
+                                          const Icon(
+                                            CupertinoIcons.chevron_forward,
+                                            color: Color(0xFF2E2E2E),
                                           ),
-                                        ),
-                                        const Icon(
-                                          CupertinoIcons.chevron_forward,
-                                          color: Color(0xFF2E2E2E),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   );
                                 },

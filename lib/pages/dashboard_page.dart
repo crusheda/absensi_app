@@ -171,6 +171,68 @@ class _DashboardPageState extends State<DashboardPage> {
     });
   }
 
+  // Untuk NAMA SHIFT
+  Widget _buildNamaShift() {
+    if (isRetrying) {
+      return const CupertinoTheme(
+        data: CupertinoThemeData(brightness: Brightness.dark),
+        child: CupertinoActivityIndicator(
+          key: ValueKey('loadingNamaShiftStart'),
+          radius: 10,
+        ),
+      );
+    } else if (isError ||
+        dashboard?.namaShift == null ||
+        dashboard!.namaShift!.isEmpty) {
+      return const Text(
+        "Gagal Ambil Data!",
+        key: ValueKey('loadingNamaShiftError'),
+        style: TextStyle(
+          color: Color.fromARGB(255, 255, 199, 199),
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+    } else {
+      return Text(
+        dashboard!.namaShift!,
+        key: const ValueKey('loadingNamaShiftEnd'),
+        style: const TextStyle(
+          color: Color.fromARGB(255, 200, 255, 205),
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+    }
+  }
+
+  // Untuk SHIFT
+  Widget _buildShift() {
+    if (isRetrying) {
+      return const CupertinoTheme(
+        data: CupertinoThemeData(brightness: Brightness.dark),
+        child: CupertinoActivityIndicator(
+          key: ValueKey('loadingShiftStart'),
+          radius: 10,
+        ),
+      );
+    } else if (isError ||
+        dashboard?.shift == null ||
+        dashboard!.shift!.isEmpty) {
+      return const Text(
+        "Hubungi Admin Jadwal",
+        key: ValueKey('loadingShiftError'),
+        style: TextStyle(color: Colors.white),
+      );
+    } else {
+      return Text(
+        dashboard!.shift!,
+        key: ValueKey('loadingShiftEnd'),
+        style: const TextStyle(color: Colors.white),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _timer.cancel();
@@ -196,13 +258,25 @@ class _DashboardPageState extends State<DashboardPage> {
               children: [
                 Row(
                   children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: CupertinoColors.systemGrey4,
-                      backgroundImage: isFotoAda
-                          ? NetworkImage(fotoUrl!)
-                          : const AssetImage('assets/user.png')
-                                as ImageProvider,
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: const [
+                          BoxShadow(
+                            color: CupertinoColors.systemGrey4,
+                            blurRadius: 6,
+                            offset: Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        radius: 24,
+                        backgroundColor: CupertinoColors.systemGrey4,
+                        backgroundImage: isFotoAda
+                            ? NetworkImage(fotoUrl!)
+                            : const AssetImage('assets/user.png')
+                                  as ImageProvider,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Column(
@@ -227,44 +301,37 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
                 const SizedBox(height: 20),
                 if (isRetrying)
-                  Positioned(
-                    bottom: 60, // atau bottom: 80 jika mau jarak lebih besar
-                    left: 16,
-                    right: 16,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      margin: const EdgeInsets.only(
-                        bottom: 20,
-                      ), // seperti SizedBox(height: 20)
-                      decoration: BoxDecoration(
-                        color: CupertinoColors.systemGrey6.withOpacity(0.85),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        children: [
-                          const CupertinoActivityIndicator(radius: 10),
-                          const SizedBox(width: 8),
-                          const Text(
-                            "Memuat Dashboard...",
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: CupertinoColors.black,
-                            ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: CupertinoColors.systemGrey6.withOpacity(0.85),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      children: [
+                        const CupertinoActivityIndicator(radius: 10),
+                        const SizedBox(width: 8),
+                        const Text(
+                          "Memuat Dashboard...",
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: CupertinoColors.black,
                           ),
-                          const Spacer(),
-                          Text(
-                            "$loadingProgress%",
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: CupertinoColors.black,
-                            ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          "$loadingProgress%",
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: CupertinoColors.black,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ClipRRect(
@@ -355,24 +422,30 @@ class _DashboardPageState extends State<DashboardPage> {
                             ),
                           ),
                           SizedBox(height: 1),
-                          Text(
-                            (dashboard?.namaShift?.isNotEmpty ?? false)
-                                ? dashboard?.namaShift ?? '-'
-                                : "Gagal Ambil Data!",
-                            style: TextStyle(
-                              color: (dashboard?.namaShift?.isNotEmpty ?? false)
-                                  ? const Color.fromARGB(255, 200, 255, 205)
-                                  : const Color.fromARGB(255, 255, 199, 199),
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            transitionBuilder:
+                                (Widget child, Animation<double> animation) {
+                                  return FadeTransition(
+                                    opacity: animation,
+                                    child: child,
+                                  );
+                                },
+                            child:
+                                _buildNamaShift(), // Ini akan berganti dengan animasi saat berubah
                           ),
-                          SizedBox(height: 3),
-                          Text(
-                            (dashboard?.shift?.isNotEmpty ?? false)
-                                ? dashboard?.shift ?? '-'
-                                : "Hubungi Admin Jadwal",
-                            style: TextStyle(color: Colors.white),
+                          const SizedBox(height: 3),
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            transitionBuilder:
+                                (Widget child, Animation<double> animation) {
+                                  return FadeTransition(
+                                    opacity: animation,
+                                    child: child,
+                                  );
+                                },
+                            child:
+                                _buildShift(), // Ini akan berganti dengan animasi saat berubah
                           ),
                         ],
                       ),
@@ -586,7 +659,11 @@ class _DashboardPageState extends State<DashboardPage> {
             color: CupertinoColors.white,
             borderRadius: BorderRadius.circular(12),
             boxShadow: const [
-              BoxShadow(color: Color(0x11000000), blurRadius: 4),
+              BoxShadow(
+                color: CupertinoColors.systemGrey4,
+                blurRadius: 4,
+                offset: Offset(0, 3),
+              ),
             ],
           ),
           child: Column(

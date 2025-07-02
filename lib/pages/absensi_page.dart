@@ -29,11 +29,12 @@ class AbsensiPage extends StatefulWidget {
 class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
   // static const lokasiAbsensi = LatLng(-7.63784400323098, 110.86790404168357);
   static const radiusKantorMeter = 30.0;
-  LatLng? lokasiAbsensi = LatLng(-7.677808018043964, 110.83967042125602);
+  LatLng? lokasiAbsensi = LatLng(-7.677851238136329, 110.83968584828327);
   // LOKASI RS = -7.677808018043964, 110.83967042125602
   // LOKASI RUMAH = -7.637823555197155, 110.86796229092549
 
   bool _sedangSubmitAbsensi = false;
+  bool _sedangAmbilLokasi = false;
   bool _isRefreshingLocation = false;
   bool _izinLokasiDitolak = false;
   bool _notifikasiSudahDikirim = false;
@@ -99,6 +100,9 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
 
   void _startLocationStream() async {
     LocationPermission permission = await Geolocator.checkPermission();
+
+    if (_sedangAmbilLokasi) return;
+    _sedangAmbilLokasi = true;
 
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
@@ -291,6 +295,9 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
             }
           }
         });
+
+    // Setelah semua proses selesai
+    _sedangAmbilLokasi = false;
   }
 
   @override
@@ -305,6 +312,8 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     if (state == AppLifecycleState.resumed) {
       print('App resumed, refresh page');
+
+      if (!_alreadyInitialized) return;
 
       final permission = await Geolocator.checkPermission();
 
