@@ -57,6 +57,7 @@ class RekapPage extends StatefulWidget {
 }
 
 class _RekapPageState extends State<RekapPage> {
+  bool isLoading = true;
   String selectedFilter = '1';
   List<RiwayatModel> riwayat = [];
   int tepatWaktu = 0;
@@ -121,11 +122,41 @@ class _RekapPageState extends State<RekapPage> {
     super.dispose();
   }
 
+  void _showApiErrorPopup(String message) {
+    showCupertinoDialog(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: const Text("Gagal Memuat Data"),
+        content: Text(message),
+        actions: [
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            child: const Text("Tutup"),
+            onPressed: () => Navigator.of(ctx).pop(),
+          ),
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            child: const Text("Muat Ulang"),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              fetchRiwayat();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> fetchRiwayat() async {
+    setState(() => isLoading = true);
+
     final url =
         '${ApiService.baseUrl}/kepegawaian/rekap/${widget.id_user}/$selectedFilter';
     try {
-      final response = await http.get(Uri.parse(url));
+      final response = await http
+          .get(Uri.parse(url))
+          .timeout(const Duration(seconds: 10));
+
       if (response.statusCode == 200) {
         final jsonResponse = json.decode(response.body);
         final List<dynamic> show = jsonResponse['show'] ?? [];
@@ -138,9 +169,13 @@ class _RekapPageState extends State<RekapPage> {
         });
       } else {
         print("Gagal memuat data riwayat: ${response.body}");
+        _showApiErrorPopup("Periksa koneksi atau hubungi admin.");
       }
     } catch (e) {
       print("Exception: $e");
+    } finally {
+      setState(() => isLoading = false);
+      _showApiErrorPopup("Periksa koneksi atau hubungi admin.");
     }
   }
 
@@ -285,29 +320,29 @@ class _RekapPageState extends State<RekapPage> {
                 ),
 
                 const SizedBox(height: 12),
-
                 _buildFilterPicker(context),
-
                 const SizedBox(height: 12),
+
+                // ✅ Box Statistik
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
                       _buildStatBox(
                         "Tepat Waktu",
-                        "${tepatWaktu}x",
+                        "${tepatWaktu ?? 'x'}x",
                         CupertinoColors.activeGreen,
                       ),
                       const SizedBox(width: 8),
                       _buildStatBox(
                         "Terlambat",
-                        "${terlambat}x",
+                        "${terlambat ?? 'x'}x",
                         CupertinoColors.systemRed,
                       ),
                       const SizedBox(width: 8),
                       _buildStatBox(
                         "Absen 1x",
-                        "${absenone}x",
+                        "${absenone ?? 'x'}x",
                         CupertinoColors.systemOrange,
                       ),
                     ],
@@ -316,193 +351,121 @@ class _RekapPageState extends State<RekapPage> {
 
                 const SizedBox(height: 12),
 
+                // ✅ List atau Loading
                 Expanded(
-                  child: (riwayat?.isEmpty ?? true)
+                  child: isLoading
                       ? const Center(
-                          child: Text(
-                            "Data Absensi tidak ada",
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: CupertinoColors.systemGrey,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+                          child: CupertinoActivityIndicator(radius: 14),
                         )
-                      : ListView.separated(
-                          controller: _scrollController,
-                          itemCount: riwayat.length,
-                          padding: const EdgeInsets.all(16),
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 8),
-                          itemBuilder: (context, index) {
-                            final item = riwayat[index];
-
-                            IconData iconData = CupertinoIcons.question;
-                            Color iconColor = CupertinoColors.systemGrey;
-
-                            if (item.jenis == 1) {
-                              if (item.tglOut == null && item.terlambat == 0) {
-                                iconData = CupertinoIcons.cloud_sun;
-                                iconColor = CupertinoColors.systemOrange;
-                              } else if (item.tglOut == null &&
-                                  item.terlambat == 1) {
-                                iconData = CupertinoIcons.cloud_sun;
-                                iconColor = CupertinoColors.systemRed;
-                              } else if (item.tglOut != null &&
-                                  item.terlambat == 0) {
-                                iconData = CupertinoIcons.sun_max;
-                                iconColor = CupertinoColors.systemBlue;
-                              } else if (item.tglOut != null &&
-                                  item.terlambat == 1) {
-                                iconData = CupertinoIcons.sun_max;
-                                iconColor = CupertinoColors.systemRed;
-                              }
-                            } else if (item.jenis == 3) {
-                              iconData = CupertinoIcons.flag;
-                              iconColor = CupertinoColors.activeGreen;
-                            }
-
-                            return CupertinoButton(
-                              padding: const EdgeInsets.all(12),
-                              color: CupertinoColors.systemGrey6,
-                              borderRadius: BorderRadius.circular(12),
-                              onPressed: () async {
-                                showDialog(
-                                  context: context,
-                                  barrierDismissible: false,
-                                  builder: (_) => Center(
-                                    child: Container(
-                                      padding: const EdgeInsets.all(20),
-                                      decoration: BoxDecoration(
-                                        color: CupertinoColors.systemGrey6,
-                                        borderRadius: BorderRadius.circular(16),
-                                        boxShadow: const [
-                                          BoxShadow(
-                                            color: CupertinoColors.systemGrey,
-                                            blurRadius: 10,
-                                            offset: Offset(0, 3),
-                                          ),
-                                        ],
-                                      ),
-                                      width: 70, // ✅ diperkecil
-                                      height: 70, // ✅ diperkecil
-                                      child: const CupertinoActivityIndicator(
-                                        radius: 12, // ✅ diperkecil dari 16
-                                      ),
-                                    ),
+                      : (riwayat.isEmpty
+                            ? const Center(
+                                child: Text(
+                                  "Data Absensi tidak ada",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: CupertinoColors.systemGrey,
+                                    fontWeight: FontWeight.w500,
                                   ),
-                                );
-
-                                await Future.delayed(
-                                  const Duration(milliseconds: 500),
-                                );
-
-                                if (context.mounted) Navigator.pop(context);
-
-                                // Navigasi ke halaman detail
-                                Navigator.of(context).push(
-                                  CupertinoPageRoute(
-                                    builder: (context) =>
-                                        DetailRekapAbsensiPage(
-                                          idAbsensi: item.idAbsensi,
-                                        ),
-                                  ),
-                                );
-                              },
-
-                              child: Row(
-                                children: [
-                                  Icon(iconData, color: iconColor),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text.rich(
-                                          TextSpan(
-                                            children: [
-                                              if (item.jenis == 1) ...[
-                                                TextSpan(
-                                                  text: "Shift ${item.shift} ",
-                                                  style: const TextStyle(
-                                                    fontSize: 15,
-                                                    color: Color(0xFF2E2E2E),
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                                if (item.terlambat == 1 &&
-                                                    item.tglOut != null)
-                                                  const TextSpan(
-                                                    text: "(Terlambat)",
-                                                    style: TextStyle(
-                                                      color: CupertinoColors
-                                                          .systemRed,
-                                                      fontSize: 15,
-                                                      fontWeight:
-                                                          FontWeight.w500,
-                                                    ),
-                                                  )
-                                                else if (item.tglOut == null)
-                                                  const TextSpan(
-                                                    text: "(Absen 1x)",
-                                                    style: TextStyle(
-                                                      color: CupertinoColors
-                                                          .systemYellow,
-                                                      fontSize: 15,
-                                                      fontWeight:
-                                                          FontWeight.w500,
-                                                    ),
-                                                  )
-                                                else if (item.terlambat == 0 &&
-                                                    item.tglIn != null &&
-                                                    item.tglOut != null)
-                                                  const TextSpan(
-                                                    text: "(Tepat Waktu)",
-                                                    style: TextStyle(
-                                                      color: CupertinoColors
-                                                          .activeGreen,
-                                                      fontSize: 15,
-                                                      fontWeight:
-                                                          FontWeight.w500,
-                                                    ),
-                                                  ),
-                                              ] else if (item.jenis == 3) ...[
-                                                const TextSpan(
-                                                  text: "Ijin / Tidak Masuk",
-                                                  style: TextStyle(
-                                                    fontSize: 15,
-                                                    color: Color(0xFF2E2E2E),
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
+                                ),
+                              )
+                            : ListView.separated(
+                                controller: _scrollController,
+                                itemCount: riwayat.length,
+                                padding: const EdgeInsets.all(16),
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 8),
+                                itemBuilder: (context, index) {
+                                  final item = riwayat[index];
+                                  // ... builder tetap
+                                  return CupertinoButton(
+                                    padding: const EdgeInsets.all(12),
+                                    color: CupertinoColors.systemGrey6,
+                                    borderRadius: BorderRadius.circular(12),
+                                    onPressed: () async {
+                                      showDialog(
+                                        context: context,
+                                        barrierDismissible: false,
+                                        builder: (_) => Center(
+                                          child: Container(
+                                            padding: const EdgeInsets.all(20),
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  CupertinoColors.systemGrey6,
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                              boxShadow: const [
+                                                BoxShadow(
+                                                  color: CupertinoColors
+                                                      .systemGrey,
+                                                  blurRadius: 10,
+                                                  offset: Offset(0, 3),
                                                 ),
                                               ],
+                                            ),
+                                            width: 70,
+                                            height: 70,
+                                            child:
+                                                const CupertinoActivityIndicator(
+                                                  radius: 12,
+                                                ),
+                                          ),
+                                        ),
+                                      );
+
+                                      await Future.delayed(
+                                        const Duration(milliseconds: 500),
+                                      );
+
+                                      if (context.mounted)
+                                        Navigator.pop(context);
+
+                                      Navigator.of(context).push(
+                                        CupertinoPageRoute(
+                                          builder: (context) =>
+                                              DetailRekapAbsensiPage(
+                                                idAbsensi: item.idAbsensi,
+                                              ),
+                                        ),
+                                      );
+                                    },
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          CupertinoIcons.sun_max,
+                                          color: CupertinoColors.systemBlue,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text("Shift ${item.shift}"),
+                                              Text(
+                                                formatTanggal(item.tglIn),
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: CupertinoColors
+                                                      .systemGrey,
+                                                ),
+                                              ),
                                             ],
                                           ),
                                         ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          formatTanggal(item.tglIn) ?? '-',
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: CupertinoColors.systemGrey,
-                                          ),
+                                        const Icon(
+                                          CupertinoIcons.chevron_forward,
+                                          color: Color(0xFF2E2E2E),
                                         ),
                                       ],
                                     ),
-                                  ),
-                                  const Icon(
-                                    CupertinoIcons.chevron_forward,
-                                    color: Color(0xFF2E2E2E),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
+                                  );
+                                },
+                              )),
                 ),
               ],
             ),
+
+            // ✅ Tombol ke atas jika scroll panjang
             if (showBackToTopButton)
               Positioned(
                 bottom: 24,

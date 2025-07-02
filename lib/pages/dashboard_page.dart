@@ -38,6 +38,7 @@ class _DashboardPageState extends State<DashboardPage> {
   bool isError = false;
   bool isRetrying = false;
   String _currentTime = "";
+  int loadingProgress = 0;
 
   String formatTanggalIndonesia(String? tanggal) {
     if (tanggal == null) return '-';
@@ -73,30 +74,52 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _loadDashboard() async {
+    if (!mounted) return;
+
     setState(() {
       isError = false;
       isRetrying = true;
+      loadingProgress = 0;
     });
 
     final url = '${ApiService.baseUrl}/dashboard/${widget.id_user}';
     try {
-      final response = await http.get(Uri.parse(url));
+      final response = await http
+          .get(Uri.parse(url))
+          .timeout(const Duration(seconds: 10));
+      if (!mounted) return;
+      setState(() {
+        loadingProgress = 70;
+      });
+
+      print('Status: ${response.statusCode}');
+      print('Body: ${response.body}');
+
       if (response.statusCode == 200) {
         final jsonMap = json.decode(response.body);
+        if (!mounted) return;
+
         setState(() {
           dashboard = DashboardData.fromJson(jsonMap);
           isError = false;
+          loadingProgress = 100;
         });
       } else {
+        if (!mounted) return;
         setState(() {
           isError = true;
         });
+        _showApiErrorPopup(); // 👈 tampilkan dialog
       }
     } catch (e) {
+      print('Parsing error: $e');
+      if (!mounted) return;
       setState(() {
         isError = true;
       });
+      _showApiErrorPopup(); // 👈 tampilkan dialog
     } finally {
+      if (!mounted) return;
       setState(() {
         isRetrying = false;
       });
@@ -118,6 +141,36 @@ class _DashboardPageState extends State<DashboardPage> {
     });
   }
 
+  void _showApiErrorPopup() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        showCupertinoDialog(
+          context: context,
+          builder: (ctx) => CupertinoAlertDialog(
+            title: const Text("Gagal Memuat Data"),
+            content: const Text("Periksa koneksi atau hubungi admin."),
+            actions: [
+              // Tombol kiri: Tutup
+              CupertinoDialogAction(
+                child: const Text("Tutup"),
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
+              // Tombol kanan: Muat Ulang
+              CupertinoDialogAction(
+                isDestructiveAction: true,
+                child: const Text("Muat Ulang"),
+                onPressed: () {
+                  Navigator.of(ctx).pop(); // Tutup popup dulu
+                  _loadDashboard(); // Panggil ulang load data
+                },
+              ),
+            ],
+          ),
+        );
+      }
+    });
+  }
+
   @override
   void dispose() {
     _timer.cancel();
@@ -126,59 +179,8 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (dashboard == null) {
-      return Center(
-        child: isError
-            ? Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    "Data API Gagal dimuat.",
-                    style: TextStyle(
-                      color: Color.fromARGB(255, 0, 0, 0),
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  isRetrying
-                      ? const CupertinoActivityIndicator()
-                      : CupertinoButton.filled(
-                          color: CupertinoColors.activeBlue,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                          onPressed: _loadDashboard,
-                          child: const Text("Muat Ulang"),
-                        ),
-                ],
-              )
-            : const CupertinoActivityIndicator(),
-      );
-    }
-
-    if (isError) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'Gagal memproses Data API Dashboard.',
-              style: TextStyle(color: CupertinoColors.systemRed),
-            ),
-            const SizedBox(height: 8),
-            CupertinoButton(
-              color: CupertinoColors.activeBlue,
-              onPressed: _loadDashboard,
-              child: const Text("Muat Ulang"),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final bool isFotoAda = widget.fotoProfil.trim().isNotEmpty;
+    // Saat berhasil memuat dashboard
+    final bool isFotoAda = widget.fotoProfil?.trim().isNotEmpty ?? false;
     final fotoUrl = isFotoAda
         ? '${ApiService.simrsUrl}/storage/${widget.fotoProfil.replaceFirst('public/', '')}'
         : null;
@@ -186,288 +188,386 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return CupertinoPageScaffold(
       child: SafeArea(
-        child: ListView(
-          physics: const ClampingScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+        child: Stack(
           children: [
-            Row(
+            ListView(
+              physics: const ClampingScrollPhysics(),
+              padding: const EdgeInsets.all(16),
               children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: CupertinoColors.systemGrey4,
-                  backgroundImage: isFotoAda
-                      ? NetworkImage(fotoUrl!)
-                      : const AssetImage('assets/user.png') as ImageProvider,
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Row(
                   children: [
-                    const Text(
-                      "Selamat datang kembali,",
-                      style: TextStyle(color: CupertinoColors.systemGrey),
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: CupertinoColors.systemGrey4,
+                      backgroundImage: isFotoAda
+                          ? NetworkImage(fotoUrl!)
+                          : const AssetImage('assets/user.png')
+                                as ImageProvider,
                     ),
-                    Text(
-                      widget.nama ?? '-',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                Image.asset("assets/logo/logo_clear_100kb.png", width: 40),
-              ],
-            ),
-            const SizedBox(height: 20),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Image.asset(
-                    "assets/cover2.jpg",
-                    height: 250,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                  Container(
-                    height: 250,
-                    width: double.infinity,
-                    color: Colors.black.withOpacity(0.5),
-                  ),
-                  Positioned(
-                    top: 12,
-                    left: 16,
-                    child: Column(
+                    const SizedBox(width: 12),
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          "Status Pegawai",
-                          style: TextStyle(color: Colors.white, fontSize: 12),
+                        const Text(
+                          "Selamat datang kembali,",
+                          style: TextStyle(color: CupertinoColors.systemGrey),
                         ),
                         Text(
-                          dashboard!.statuspgw!.namaStatus,
-                          style: TextStyle(
-                            color: Colors.white,
+                          widget.nama ?? '-',
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 15,
+                            fontSize: 18,
                           ),
                         ),
                       ],
                     ),
-                  ),
+                    const Spacer(),
+                    Image.asset("assets/logo/logo_clear_100kb.png", width: 40),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                if (isRetrying)
                   Positioned(
-                    top: 12,
-                    right: 12,
+                    bottom: 60, // atau bottom: 80 jika mau jarak lebih besar
+                    left: 16,
+                    right: 16,
                     child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: CupertinoColors.white,
-                        borderRadius: BorderRadius.circular(8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
                       ),
-                      child: Column(
+                      margin: const EdgeInsets.only(
+                        bottom: 20,
+                      ), // seperti SizedBox(height: 20)
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemGrey6.withOpacity(0.85),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
                         children: [
-                          Text(
-                            DateFormat(
-                              'MMM',
-                              'id_ID',
-                            ).format(DateTime.now()).toUpperCase(),
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
+                          const CupertinoActivityIndicator(radius: 10),
+                          const SizedBox(width: 8),
+                          const Text(
+                            "Memuat Dashboard...",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: CupertinoColors.black,
                             ),
                           ),
+                          const Spacer(),
                           Text(
-                            DateFormat('dd', 'id_ID').format(DateTime.now()),
+                            "$loadingProgress%",
                             style: const TextStyle(
-                              color: CupertinoColors.activeBlue,
-                              fontSize: 20,
+                              fontSize: 13,
                               fontWeight: FontWeight.bold,
+                              color: CupertinoColors.black,
                             ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      Text(
-                        "Jadwal Hari Ini",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                      Image.asset(
+                        "assets/cover2.jpg",
+                        height: 250,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                      Container(
+                        height: 250,
+                        width: double.infinity,
+                        color: Colors.black.withOpacity(0.5),
+                      ),
+                      Positioned(
+                        top: 12,
+                        left: 16,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Status Pegawai",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                            Text(
+                              dashboard?.statuspgw?.namaStatus ?? '-',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      SizedBox(height: 1),
-                      Text(
-                        (dashboard?.namaShift?.isNotEmpty ?? false)
-                            ? dashboard!.namaShift
-                            : "Tidak Ada",
-                        style: TextStyle(
-                          color: (dashboard?.namaShift?.isNotEmpty ?? false)
-                              ? const Color.fromARGB(255, 200, 255, 205)
-                              : const Color.fromARGB(255, 255, 199, 199),
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 3),
-                      Text(
-                        (dashboard?.shift?.isNotEmpty ?? false)
-                            ? dashboard!.shift
-                            : "Hubungi Admin Jadwal",
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ],
-                  ),
-                  Positioned(
-                    bottom: 10,
-                    left: 16,
-                    child: Text(
-                      DateFormat(
-                        'EEEE, d MMMM yyyy',
-                        'id_ID',
-                      ).format(DateTime.now()),
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 10,
-                    right: 16,
-                    child: Text(
-                      _currentTime,
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              "\u{1F501} Perhitungan Absensi Bulan Ini",
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                _buildSquareStat(
-                  "Tepat Waktu",
-                  "${dashboard!.hadir}x",
-                  CupertinoColors.activeBlue,
-                ),
-                _buildSquareStat(
-                  "Absen 1x/hr",
-                  "${dashboard!.absenOne}x",
-                  CupertinoColors.systemOrange,
-                ),
-                _buildSquareStat(
-                  "Terlambat",
-                  "${dashboard!.terlambat}x",
-                  CupertinoColors.systemRed,
-                ),
-                _buildSquareStat(
-                  "Ijin",
-                  "${dashboard!.ijin}x",
-                  CupertinoColors.systemGreen,
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            dashboard?.jadwal != null
-                ? Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: CupertinoColors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: const [
-                        BoxShadow(color: Color(0x22000000), blurRadius: 4),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 24,
-                          backgroundColor: CupertinoColors.systemGrey4,
-                          backgroundImage:
-                              (fotoUrlAdminJadwal != null &&
-                                  fotoUrlAdminJadwal.isNotEmpty)
-                              ? NetworkImage(
-                                  "${ApiService.simrsUrl}/storage/${fotoUrlAdminJadwal.replaceFirst('public/', '')}",
-                                )
-                              : const AssetImage('assets/user.png'),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
+                      Positioned(
+                        top: 12,
+                        right: 12,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: CupertinoColors.white,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Jadwal ${bulanToNama(dashboard?.jadwal?.bulan)} ${dashboard?.jadwal?.tahun}",
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              SizedBox(height: 2),
-                              Text(
-                                "Diperbarui oleh:",
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: CupertinoColors.systemGrey,
-                                ),
-                              ),
-                              SizedBox(height: 1),
-                              Text(
-                                "${dashboard?.jadwal?.namaPegawai} (Admin Jadwal)",
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: CupertinoColors.systemGrey,
-                                ),
-                              ),
-                              SizedBox(height: 1),
-                              Text(
-                                formatTanggalIndonesia(
-                                  dashboard?.jadwal?.updatedAt,
-                                ),
+                                DateFormat(
+                                  'MMM',
+                                  'id_ID',
+                                ).format(DateTime.now()).toUpperCase(),
                                 style: const TextStyle(
-                                  fontSize: 11,
-                                  color: CupertinoColors.systemGrey,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                DateFormat(
+                                  'dd',
+                                  'id_ID',
+                                ).format(DateTime.now()),
+                                style: const TextStyle(
+                                  color: CupertinoColors.activeBlue,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        CupertinoButton(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          color: const Color.fromARGB(255, 71, 71, 71),
-                          onPressed: () {
-                            MainPageController.changeTab?.call(1);
-                          },
-                          child: const Text(
-                            "LIHAT",
+                      ),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Jadwal Hari Ini",
                             style: TextStyle(
-                              fontSize: 12,
-                              color: Color.fromARGB(255, 255, 255, 255),
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
+                          SizedBox(height: 1),
+                          Text(
+                            (dashboard?.namaShift?.isNotEmpty ?? false)
+                                ? dashboard?.namaShift ?? '-'
+                                : "Gagal Ambil Data!",
+                            style: TextStyle(
+                              color: (dashboard?.namaShift?.isNotEmpty ?? false)
+                                  ? const Color.fromARGB(255, 200, 255, 205)
+                                  : const Color.fromARGB(255, 255, 199, 199),
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 3),
+                          Text(
+                            (dashboard?.shift?.isNotEmpty ?? false)
+                                ? dashboard?.shift ?? '-'
+                                : "Hubungi Admin Jadwal",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ],
+                      ),
+                      Positioned(
+                        bottom: 10,
+                        left: 16,
+                        child: Text(
+                          DateFormat(
+                            'EEEE, d MMMM yyyy',
+                            'id_ID',
+                          ).format(DateTime.now()),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
                         ),
-                      ],
+                      ),
+                      Positioned(
+                        bottom: 10,
+                        right: 16,
+                        child: Text(
+                          _currentTime,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  "\u{1F501} Perhitungan Absensi Bulan Ini",
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    _buildSquareStat(
+                      "Tepat Waktu",
+                      isRetrying
+                          ? const CupertinoActivityIndicator(radius: 8)
+                          : Text(
+                              "${dashboard?.hadir ?? 'x'}x",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: CupertinoColors.activeBlue,
+                              ),
+                            ),
+                      CupertinoColors.activeBlue,
                     ),
-                  )
-                : const SizedBox.shrink(),
-            dashboard?.jadwal != null
-                ? const SizedBox(height: 20)
-                : const SizedBox(height: 0),
-            _buildActionTile(
-              "Riwayat Absensi",
-              CupertinoIcons.clock,
-              CupertinoColors.systemIndigo,
-            ),
-            _buildActionTile(
-              "Tata Cara Absensi",
-              CupertinoIcons.book,
-              CupertinoColors.systemGreen,
+                    _buildSquareStat(
+                      "Absen 1x/hr",
+                      isRetrying
+                          ? const CupertinoActivityIndicator(radius: 8)
+                          : Text(
+                              "${dashboard?.absenOne ?? 'x'}x",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: CupertinoColors.systemOrange,
+                              ),
+                            ),
+                      CupertinoColors.systemOrange,
+                    ),
+                    _buildSquareStat(
+                      "Terlambat",
+                      isRetrying
+                          ? const CupertinoActivityIndicator(radius: 8)
+                          : Text(
+                              "${dashboard?.terlambat ?? 'x'}x",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: CupertinoColors.systemRed,
+                              ),
+                            ),
+                      CupertinoColors.systemRed,
+                    ),
+                    _buildSquareStat(
+                      "Ijin",
+                      isRetrying
+                          ? const CupertinoActivityIndicator(radius: 8)
+                          : Text(
+                              "${dashboard?.ijin ?? 'x'}x",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: CupertinoColors.systemGreen,
+                              ),
+                            ),
+                      CupertinoColors.systemGreen,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                dashboard?.jadwal != null
+                    ? Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: CupertinoColors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: const [
+                            BoxShadow(color: Color(0x22000000), blurRadius: 4),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 24,
+                              backgroundColor: CupertinoColors.systemGrey4,
+                              backgroundImage:
+                                  (fotoUrlAdminJadwal != null &&
+                                      fotoUrlAdminJadwal.isNotEmpty)
+                                  ? NetworkImage(
+                                      "${ApiService.simrsUrl}/storage/${fotoUrlAdminJadwal.replaceFirst('public/', '')}",
+                                    )
+                                  : const AssetImage('assets/user.png'),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Jadwal ${bulanToNama(dashboard?.jadwal?.bulan)} ${dashboard?.jadwal?.tahun}",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    "Diperbarui oleh:",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: CupertinoColors.systemGrey,
+                                    ),
+                                  ),
+                                  SizedBox(height: 1),
+                                  Text(
+                                    "${dashboard?.jadwal?.namaPegawai} (Admin Jadwal)",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: CupertinoColors.systemGrey,
+                                    ),
+                                  ),
+                                  SizedBox(height: 1),
+                                  Text(
+                                    formatTanggalIndonesia(
+                                      dashboard?.jadwal?.updatedAt,
+                                    ),
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: CupertinoColors.systemGrey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            CupertinoButton(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              color: const Color.fromARGB(255, 71, 71, 71),
+                              onPressed: () {
+                                MainPageController.changeTab?.call(1);
+                              },
+                              child: const Text(
+                                "LIHAT",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color.fromARGB(255, 255, 255, 255),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+                dashboard?.jadwal != null
+                    ? const SizedBox(height: 20)
+                    : const SizedBox(height: 0),
+                _buildActionTile(
+                  "Riwayat Absensi",
+                  CupertinoIcons.clock,
+                  CupertinoColors.systemIndigo,
+                ),
+                _buildActionTile(
+                  "Tata Cara Absensi",
+                  CupertinoIcons.book,
+                  CupertinoColors.systemGreen,
+                ),
+              ],
             ),
           ],
         ),
@@ -475,7 +575,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildSquareStat(String label, String count, Color color) {
+  Widget _buildSquareStat(String label, Widget content, Color color) {
     return Expanded(
       child: AspectRatio(
         aspectRatio: 1,
@@ -492,14 +592,7 @@ class _DashboardPageState extends State<DashboardPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                count,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
+              content,
               const SizedBox(height: 4),
               Text(
                 label,

@@ -29,7 +29,7 @@ class AbsensiPage extends StatefulWidget {
 class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
   // static const lokasiAbsensi = LatLng(-7.63784400323098, 110.86790404168357);
   static const radiusKantorMeter = 30.0;
-  LatLng? lokasiAbsensi = LatLng(-7.637823555197155, 110.86796229092549);
+  LatLng? lokasiAbsensi = LatLng(-7.677808018043964, 110.83967042125602);
   // LOKASI RS = -7.677808018043964, 110.83967042125602
   // LOKASI RUMAH = -7.637823555197155, 110.86796229092549
 
