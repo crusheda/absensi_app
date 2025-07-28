@@ -1,6 +1,7 @@
 // Final Absensi Page dengan desain kotak seperti pada gambar terakhir
 import 'dart:async';
 import 'dart:io';
+import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -8,14 +9,16 @@ import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart';
 import 'package:app_settings/app_settings.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../services/api_service.dart';
+import '../main.dart';
 import '../models/absensi_enum.dart';
+import 'custom_camera_ios.dart';
 
 class AbsensiPage extends StatefulWidget {
   final int id_user;
@@ -605,19 +608,44 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
     }
   }
 
+  late List<CameraDescription> cameras = [];
   Future<void> _showCameraModal(AbsensiJenis jenis) async {
     await _requestCameraPermission();
     _sedangSubmitAbsensi = true;
 
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.camera);
+    // Siapkan kamera (pastikan cameras sudah diinisialisasi di main.dart)
+    if (cameras.isEmpty) {
+      cameras = await availableCameras();
+    }
+
+    final frontCamera = cameras.firstWhere(
+      (cam) => cam.lensDirection == CameraLensDirection.front,
+      orElse: () => cameras.first,
+    );
+    final rearCamera = cameras.firstWhere(
+      (cam) => cam.lensDirection == CameraLensDirection.back,
+      orElse: () => cameras.first,
+    );
+
+    final pickedFile = await Navigator.of(context).push<XFile?>(
+      CupertinoPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => CustomCameraIOS(
+          frontCamera: frontCamera,
+          rearCamera: rearCamera,
+          allowSwitchCamera: jenis == AbsensiJenis.ijin,
+          // onPictureTaken: (_) {}, // optional, sudah tidak perlu
+        ),
+      ),
+    );
 
     if (pickedFile != null) {
       final originalFile = File(pickedFile.path);
       final file = await _compressAndResizeImage(originalFile);
 
       if (file == null) {
-        print("Gagal kompres foto");
+        debugPrint("Gagal kompres foto");
+        _sedangSubmitAbsensi = false;
         return;
       }
 
@@ -625,14 +653,14 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
       final long = _position?.longitude;
       final TextEditingController keteranganController =
           TextEditingController();
+      final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
 
       showCupertinoDialog(
         context: context,
         builder: (_) => CupertinoAlertDialog(
           title: const Text("Konfirmasi Absensi"),
           content: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start, // atur rata kiri untuk label
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: 12),
@@ -660,7 +688,18 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                   controller: keteranganController,
                   maxLines: 2,
                   placeholder: "",
-                  placeholderStyle: const TextStyle(fontSize: 12), // font kecil
+                  placeholderStyle: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? CupertinoColors.systemGrey
+                        : CupertinoColors.systemGrey2,
+                  ),
+                  style: TextStyle(
+                    color: isDark
+                        ? CupertinoColors.white
+                        : CupertinoColors.black,
+                    fontSize: 12,
+                  ),
                   padding: const EdgeInsets.symmetric(
                     vertical: 8,
                     horizontal: 12,
@@ -673,6 +712,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
             CupertinoDialogAction(
               child: const Text("Batal"),
               onPressed: () {
+                if (!mounted) return;
                 Navigator.pop(context);
                 _sedangSubmitAbsensi = false;
               },
@@ -680,6 +720,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
             CupertinoDialogAction(
               isDefaultAction: true,
               onPressed: () async {
+                if (!mounted) return;
                 Navigator.pop(context);
                 final keterangan = jenis == AbsensiJenis.ijin
                     ? keteranganController.text.trim()
@@ -694,6 +735,8 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
           ],
         ),
       );
+    } else {
+      _sedangSubmitAbsensi = false;
     }
   }
 
@@ -705,8 +748,8 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
     final result = await FlutterImageCompress.compressAndGetFile(
       file.absolute.path,
       targetPath,
-      quality: 20, // Sesuaikan kualitas
-      minWidth: 720, // Ubah jika perlu
+      quality: 20,
+      minWidth: 720,
       minHeight: 960,
       format: CompressFormat.jpeg,
     );
@@ -727,7 +770,6 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
       return;
     }
 
-    // Tampilkan loading
     showCupertinoDialog(
       context: context,
       barrierDismissible: false,
@@ -747,11 +789,12 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
         imageFile: file,
         latitude: lat,
         longitude: long,
-        jenis: jenis.kode, // gunakan kode dari enum
+        jenis: jenis.kode,
         keterangan: keterangan,
       );
 
-      if (context.mounted) Navigator.pop(context); // Tutup loading
+      if (!mounted) return;
+      Navigator.pop(context);
 
       if (result['code'] == 200) {
         await flutterLocalNotificationsPlugin.show(
@@ -762,28 +805,12 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
             android: AndroidNotificationDetails(
               'absen_channel',
               'Notifikasi E-Absensi',
-              channelDescription: 'Notifikasi setelah berhasil absensi',
+              channelDescription: 'Notifikasi berhasil absensi',
               importance: Importance.max,
               priority: Priority.high,
             ),
           ),
         );
-
-        // showCupertinoDialog(
-        //   context: context,
-        //   barrierDismissible: false,
-        //   builder: (_) {
-        //     Future.delayed(const Duration(seconds: 3), () {
-        //       if (Navigator.of(context).canPop()) {
-        //         Navigator.of(context).pop();
-        //       }
-        //     });
-        //     return CupertinoAlertDialog(
-        //       title: const Text("Yeayy!! Kamu Hebat!"),
-        //       content: Text(result['message']),
-        //     );
-        //   },
-        // );
       } else {
         await flutterLocalNotificationsPlugin.show(
           0,
@@ -793,7 +820,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
             android: AndroidNotificationDetails(
               'absen_channel',
               'Notifikasi E-Absensi',
-              channelDescription: 'Notifikasi gagal proses absensi',
+              channelDescription: 'Notifikasi gagal absensi',
               importance: Importance.max,
               priority: Priority.high,
             ),
@@ -815,7 +842,8 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
         );
       }
     } catch (e) {
-      if (context.mounted) Navigator.pop(context); // Tutup loading
+      if (!mounted) return;
+      Navigator.pop(context);
 
       showCupertinoDialog(
         context: context,
@@ -842,6 +870,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
     }
     final distance = _calculateJarak();
     final insideRadius = distance <= radiusKantorMeter;
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
@@ -980,18 +1009,27 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                     width: 45,
                     height: 45,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: isDark
+                          ? CupertinoColors.secondaryLabel
+                          : CupertinoColors.white,
                       shape: BoxShape.circle,
                       boxShadow: [
-                        BoxShadow(color: Colors.black26, blurRadius: 4),
+                        BoxShadow(
+                          color: isDark
+                              ? CupertinoColors.black.withOpacity(0.5)
+                              : Colors.black26,
+                          blurRadius: 4,
+                        ),
                       ],
                     ),
                     child: Center(
                       child: _isRefreshingLocation
                           ? const CupertinoActivityIndicator(radius: 10)
-                          : const Icon(
+                          : Icon(
                               CupertinoIcons.location_solid,
-                              color: CupertinoColors.activeBlue,
+                              color: isDark
+                                  ? CupertinoColors.white
+                                  : CupertinoColors.activeBlue,
                             ),
                     ),
                   ),
@@ -1042,10 +1080,17 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                         vertical: 12,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isDark
+                            ? CupertinoColors.secondaryLabel
+                            : CupertinoColors.white,
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
-                          BoxShadow(color: Colors.black26, blurRadius: 6),
+                          BoxShadow(
+                            color: isDark
+                                ? CupertinoColors.black.withOpacity(0.5)
+                                : Colors.black26,
+                            blurRadius: 6,
+                          ),
                         ],
                       ),
                       child: Column(
@@ -1159,10 +1204,17 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                         vertical: 10,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isDark
+                            ? CupertinoColors.secondaryLabel
+                            : CupertinoColors.white,
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
-                          BoxShadow(color: Colors.black26, blurRadius: 6),
+                          BoxShadow(
+                            color: isDark
+                                ? CupertinoColors.black.withOpacity(0.5)
+                                : Colors.black26,
+                            blurRadius: 6,
+                          ),
                         ],
                       ),
                       child: Row(

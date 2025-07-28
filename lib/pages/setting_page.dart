@@ -1,10 +1,14 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:provider/provider.dart';
+import '../theme_provider.dart';
 import '../services/api_service.dart';
 import 'login_page.dart';
 
-class SettingPage extends StatelessWidget {
+class SettingPage extends StatefulWidget {
   final int id_user;
   final String name;
   final String nama;
@@ -20,7 +24,87 @@ class SettingPage extends StatelessWidget {
     required this.fotoProfil,
   });
 
-  void _showTentangAplikasi(BuildContext context) async {
+  @override
+  State<SettingPage> createState() => _SettingPageState();
+}
+
+class _SettingPageState extends State<SettingPage> {
+  String appVersion = '';
+  bool notifAllowed = false;
+  bool gpsAllowed = false;
+  bool cameraAllowed = false;
+
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAppVersion();
+    _checkPermissions();
+    _initNotifications();
+  }
+
+  Future<void> _loadAppVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    setState(() {
+      appVersion = "Versi ${info.version}";
+    });
+  }
+
+  Future<void> _checkPermissions() async {
+    final notifStatus = await Permission.notification.status;
+    final gpsStatus = await Permission.locationWhenInUse.status;
+    final cameraStatus = await Permission.camera.status;
+
+    setState(() {
+      notifAllowed = notifStatus.isGranted;
+      gpsAllowed = gpsStatus.isGranted;
+      cameraAllowed = cameraStatus.isGranted;
+    });
+  }
+
+  Future<void> _initNotifications() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const DarwinInitializationSettings initializationSettingsIOS =
+        DarwinInitializationSettings();
+    const InitializationSettings initializationSettings =
+        InitializationSettings(
+          android: initializationSettingsAndroid,
+          iOS: initializationSettingsIOS,
+        );
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  }
+
+  void _showDummyNotification() async {
+    final status = await Permission.notification.request();
+    if (!status.isGranted) {
+      return;
+    }
+
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+          'channel_id',
+          'channel_name',
+          importance: Importance.max,
+          priority: Priority.high,
+        );
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails();
+    const NotificationDetails notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      'Tes Notifikasi E-Absensi',
+      'Ini adalah contoh Notifikasi yang diberikan oleh Aplikasi E-Absensi. Tetap Semangat Absennya ya. :)',
+      notificationDetails,
+    );
+  }
+
+  void _showTentangAplikasi() async {
     final info = await PackageInfo.fromPlatform();
     final versi = info.version;
 
@@ -31,8 +115,8 @@ class SettingPage extends StatelessWidget {
         content: Padding(
           padding: const EdgeInsets.only(top: 12),
           child: Text(
-            "Versi: $versi\nDeveloper: Yussuf Faisal, S.Kom\n\nAplikasi Absensi Pegawai RS PKU Muhammadiyah Sukoharjo berbasis Flutter. "
-            "Dilengkapi fitur GPS, validasi radius kantor, dan selfie kamera saat absen. Aplikasi ini dibuat dengan sepenuh ♥️.",
+            "Versi: $versi\nDeveloper: Yussuf Faisal, S.Kom\n\nAplikasi Absensi yang dibuat dengan sepenuh ♥️ untuk Pegawai RS PKU Muhammadiyah Sukoharjo berbasis Flutter. "
+            "Dilengkapi fitur GPS, validasi radius kantor, dan selfie kamera saat absen.",
             textAlign: TextAlign.justify,
             style: const TextStyle(fontSize: 12),
           ),
@@ -40,7 +124,7 @@ class SettingPage extends StatelessWidget {
         actions: [
           CupertinoDialogAction(
             isDefaultAction: true,
-            child: const Text("Tetap Semangat"),
+            child: const Text("Tutup"),
             onPressed: () => Navigator.pop(context),
           ),
         ],
@@ -48,7 +132,7 @@ class SettingPage extends StatelessWidget {
     );
   }
 
-  Future<void> _logout(BuildContext context) async {
+  Future<void> _logout() async {
     final confirm = await showCupertinoDialog<bool>(
       context: context,
       builder: (_) => CupertinoAlertDialog(
@@ -94,22 +178,28 @@ class SettingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isFotoAda = fotoProfil.trim().isNotEmpty;
+    final bool isFotoAda = widget.fotoProfil.trim().isNotEmpty;
     final fotoUrl = isFotoAda
-        ? '${ApiService.simrsUrl}/storage/${fotoProfil.replaceFirst('public/', '')}'
+        ? '${ApiService.simrsUrl}/storage/${widget.fotoProfil.replaceFirst('public/', '')}'
         : null;
 
     return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text('Pengaturan'),
-        backgroundColor: CupertinoColors.white,
+      navigationBar: CupertinoNavigationBar(
+        middle: Text(
+          'Pengaturan',
+          style: TextStyle(
+            color: CupertinoTheme.brightnessOf(context) == Brightness.dark
+                ? CupertinoColors.systemGrey2
+                : CupertinoColors.black,
+          ),
+        ),
       ),
       child: SafeArea(
         child: Column(
           children: [
             const SizedBox(height: 20),
             CircleAvatar(
-              radius: 40,
+              radius: 42,
               backgroundColor: CupertinoColors.systemGrey4,
               backgroundImage: isFotoAda
                   ? NetworkImage(fotoUrl!)
@@ -117,11 +207,11 @@ class SettingPage extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              nama,
+              widget.nama,
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
             ),
             Text(
-              'NIP: $nip',
+              'NIP: ${widget.nip}',
               style: const TextStyle(
                 fontSize: 14,
                 color: CupertinoColors.systemGrey,
@@ -131,26 +221,121 @@ class SettingPage extends StatelessWidget {
             Expanded(
               child: ListView(
                 children: [
-                  // CupertinoListTile(
-                  //   leading: const Icon(CupertinoIcons.person),
-                  //   title: const Text('Profil'),
-                  //   subtitle: const Text('Lihat informasi karyawan'),
-                  //   onTap: () {},
-                  // ),
-                  // const SizedBox(height: 8),
-                  // CupertinoListTile(
-                  //   leading: const Icon(CupertinoIcons.settings),
-                  //   title: const Text('Pengaturan Akun'),
-                  //   subtitle: const Text('Ubah preferensi akun'),
-                  //   onTap: () {},
-                  // ),
-                  // const SizedBox(height: 8),
                   CupertinoListTile(
                     leading: const Icon(CupertinoIcons.info),
-                    title: const Text('Tentang Aplikasi'),
-                    onTap: () => _showTentangAplikasi(context),
+                    title: Text(
+                      'Tentang Aplikasi',
+                      style: TextStyle(
+                        color:
+                            CupertinoTheme.brightnessOf(context) ==
+                                Brightness.dark
+                            ? CupertinoColors.systemGrey2
+                            : CupertinoColors.systemGrey,
+                      ),
+                    ),
+                    onTap: _showTentangAplikasi,
                   ),
-                  const SizedBox(height: 8),
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Mode Gelap'),
+                            Consumer<ThemeProvider>(
+                              builder: (context, themeProvider, _) {
+                                return CupertinoSwitch(
+                                  value: themeProvider.isDarkMode,
+                                  onChanged: (isOn) {
+                                    themeProvider.toggleTheme(isOn);
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Izin Notifikasi'),
+                            CupertinoSwitch(
+                              value: notifAllowed,
+                              onChanged: notifAllowed
+                                  ? null
+                                  : (value) async {
+                                      final status = await Permission
+                                          .notification
+                                          .request();
+                                      setState(() {
+                                        notifAllowed = status.isGranted;
+                                      });
+                                    },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Izin GPS'),
+                            CupertinoSwitch(
+                              value: gpsAllowed,
+                              onChanged: gpsAllowed
+                                  ? null
+                                  : (value) async {
+                                      final status = await Permission.location
+                                          .request();
+                                      setState(() {
+                                        gpsAllowed = status.isGranted;
+                                      });
+                                    },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Izin Kamera'),
+                            CupertinoSwitch(
+                              value: cameraAllowed,
+                              onChanged: cameraAllowed
+                                  ? null
+                                  : (value) async {
+                                      final status = await Permission.camera
+                                          .request();
+                                      setState(() {
+                                        cameraAllowed = status.isGranted;
+                                      });
+                                    },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  CupertinoListTile(
+                    leading: const Icon(CupertinoIcons.bell),
+                    title: Text(
+                      'Tes Notifikasi E-Absensi',
+                      style: TextStyle(
+                        color:
+                            CupertinoTheme.brightnessOf(context) ==
+                                Brightness.dark
+                            ? CupertinoColors.systemGrey2
+                            : CupertinoColors.systemGrey,
+                      ),
+                    ),
+                    onTap: _showDummyNotification,
+                  ),
+                  const Divider(height: 1),
                   CupertinoListTile(
                     leading: const Icon(
                       CupertinoIcons.square_arrow_right,
@@ -160,9 +345,19 @@ class SettingPage extends StatelessWidget {
                       'Logout',
                       style: TextStyle(color: CupertinoColors.systemRed),
                     ),
-                    onTap: () => _logout(context),
+                    onTap: _logout,
                   ),
                 ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                appVersion,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: CupertinoColors.systemGrey,
+                ),
               ),
             ),
           ],

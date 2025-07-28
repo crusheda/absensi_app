@@ -128,7 +128,8 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
         children: [
           TileLayer(
             urlTemplate:
-                'https://tile.openstreetmap.org/{z}/{x}/{y}.png', // ✅ no subdomains
+                'https://api.maptiler.com/maps/streets/{z}/{x}/{y}.png?key=IB6iMrip0bVW8LFGT5Hs',
+            userAgentPackageName: 'com.sakudewa.absensi',
           ),
           MarkerLayer(
             markers: [
@@ -165,9 +166,12 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
     Color titleColor = CupertinoColors.black,
   }) {
     print('jenis: ${absensiDetail!['jenis']}');
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: CupertinoColors.systemGrey6,
+        color: isDark
+            ? CupertinoColors.tertiaryLabel
+            : CupertinoColors.systemGrey6,
         borderRadius: BorderRadius.circular(12),
       ),
       padding: const EdgeInsets.all(12),
@@ -206,11 +210,13 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
                         child: Text(
                           shift,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'Poppins',
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
-                            color: CupertinoColors.black,
+                            color: isDark
+                                ? CupertinoColors.systemGrey4
+                                : CupertinoColors.black,
                           ),
                         ),
                       ),
@@ -227,11 +233,13 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
                       child: Text(
                         date,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
-                          color: CupertinoColors.black,
+                          color: isDark
+                              ? CupertinoColors.systemGrey4
+                              : CupertinoColors.black,
                         ),
                       ),
                     ),
@@ -247,11 +255,13 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
                       child: Text(
                         "Pukul $time WIB",
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
-                          color: CupertinoColors.black,
+                          color: isDark
+                              ? CupertinoColors.systemGrey4
+                              : CupertinoColors.black,
                         ),
                       ),
                     ),
@@ -268,10 +278,12 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
                         child: Text.rich(
                           TextSpan(
                             text: "$infoTitle1 ",
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: CupertinoColors.black,
+                              color: isDark
+                                  ? CupertinoColors.systemGrey4
+                                  : CupertinoColors.black,
                             ),
                             children: [
                               TextSpan(
@@ -298,10 +310,12 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
                         child: Text.rich(
                           TextSpan(
                             text: "$infoTitle2 ",
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: CupertinoColors.black,
+                              color: isDark
+                                  ? CupertinoColors.systemGrey4
+                                  : CupertinoColors.black,
                             ),
                             children: [
                               TextSpan(
@@ -328,10 +342,12 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
                         child: Text.rich(
                           TextSpan(
                             text: "$lemburTitle ",
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: CupertinoColors.black,
+                              color: isDark
+                                  ? CupertinoColors.systemGrey4
+                                  : CupertinoColors.black,
                             ),
                             children: [
                               TextSpan(
@@ -356,33 +372,40 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
   }
 
   Widget _buildKeteranganBox(String keterangan) {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: CupertinoColors.systemGrey6,
+        color: isDark
+            ? CupertinoColors.tertiaryLabel
+            : CupertinoColors.systemGrey6,
         borderRadius: BorderRadius.circular(12),
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Text(
+          Text(
             "Keterangan Absensi :",
             style: TextStyle(
               fontFamily: 'Poppins',
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: CupertinoColors.black,
+              color: isDark
+                  ? CupertinoColors.systemGrey4
+                  : CupertinoColors.black,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 12),
           Text(
             keterangan.isNotEmpty ? keterangan : "-",
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Poppins',
               fontSize: 14,
-              color: CupertinoColors.black,
+              color: isDark
+                  ? CupertinoColors.systemGrey4
+                  : CupertinoColors.black,
             ),
             textAlign: TextAlign.center,
           ),
@@ -392,6 +415,7 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
   }
 
   Widget _buildMiniPhotoBox(String label, String? imageUrl, int index) {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     return Column(
       children: [
         Center(
@@ -406,11 +430,11 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
               const SizedBox(width: 6), // jarak antara ikon dan teks
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: CupertinoColors.black,
+                  color: isDark ? CupertinoColors.white : CupertinoColors.black,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -482,8 +506,15 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text('Detail Absensi'),
+      navigationBar: CupertinoNavigationBar(
+        middle: Text(
+          'Detail Absensi',
+          style: TextStyle(
+            color: CupertinoTheme.brightnessOf(context) == Brightness.dark
+                ? CupertinoColors.systemGrey2
+                : CupertinoColors.systemGrey,
+          ),
+        ),
         previousPageTitle: 'Kembali',
       ),
       child: SafeArea(

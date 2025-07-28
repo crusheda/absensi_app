@@ -29,13 +29,20 @@ class _FullscreenImageViewerState extends State<FullscreenImageViewer> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     return CupertinoPageScaffold(
-      backgroundColor: CupertinoColors.white,
-      navigationBar: const CupertinoNavigationBar(
-        backgroundColor: CupertinoColors.white,
+      backgroundColor: isDark
+          ? CupertinoColors.transparent
+          : CupertinoColors.white,
+      navigationBar: CupertinoNavigationBar(
+        backgroundColor: isDark
+            ? CupertinoColors.transparent
+            : CupertinoColors.white,
         middle: Text(
           "Bukti Foto Absensi",
-          style: TextStyle(color: CupertinoColors.black),
+          style: TextStyle(
+            color: isDark ? CupertinoColors.white : CupertinoColors.black,
+          ),
         ),
         previousPageTitle: 'Kembali',
       ),
@@ -77,9 +84,9 @@ class _FullscreenImageViewerState extends State<FullscreenImageViewer> {
             const SizedBox(height: 8),
             Text(
               labels.length > _currentIndex ? labels[_currentIndex] : "",
-              style: const TextStyle(
+              style: TextStyle(
                 decoration: TextDecoration.none,
-                color: CupertinoColors.black,
+                color: isDark ? CupertinoColors.white : CupertinoColors.black,
                 fontSize: 20,
                 fontFamily: 'Poppins',
               ),

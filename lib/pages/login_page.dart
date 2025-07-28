@@ -1,7 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../services/api_service.dart';
+import '../theme_provider.dart';
 import 'main_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -16,6 +19,19 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController passwordController = TextEditingController();
   bool isLoading = false;
   bool _obscurePassword = true;
+  String _appVersion = '';
+
+  void initState() {
+    super.initState();
+    _loadAppVersion();
+  }
+
+  void _loadAppVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    setState(() {
+      _appVersion = 'Versi ${info.version}';
+    });
+  }
 
   void login() async {
     setState(() => isLoading = true);
@@ -49,9 +65,10 @@ class _LoginPageState extends State<LoginPage> {
       showCupertinoDialog(
         context: context,
         builder: (_) => CupertinoAlertDialog(
-          title: const Text("Login Gagal"),
+          title: const Text('Login Gagal!'),
           content: Text(
-            'Mohon Pastikan kombinasi Username dan Password karyawan sudah sesuai. Lebih Lanjut silakan hubungi Admin.',
+            result['message'] ??
+                'Mohon Pastikan kombinasi Username dan Password karyawan sudah sesuai. Lebih Lanjut silakan hubungi Admin.',
           ), // Text(result['message'])
           actions: [
             CupertinoDialogAction(
@@ -68,157 +85,253 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
     return CupertinoPageScaffold(
       backgroundColor: CupertinoColors.systemGroupedBackground,
-      navigationBar: const CupertinoNavigationBar(middle: Text("")),
       child: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Logo + Teks
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
+          children: [
+            /// BACKGROUND ABSTRAK
+            Positioned(
+              top: -100,
+              left: -100,
+              child: Container(
+                width: 250,
+                height: 250,
+                decoration: BoxDecoration(
+                  color: CupertinoColors.activeBlue.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -150,
+              right: -100,
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  color: CupertinoColors.systemGrey.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+
+            Positioned(
+              top: 20,
+              right: 20,
+              child: Consumer<ThemeProvider>(
+                builder: (context, themeProvider, _) {
+                  return Row(
+                    children: [
+                      Text(
+                        themeProvider.isDarkMode ? 'Gelap' : 'Terang',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: CupertinoColors.systemGrey,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      CupertinoSwitch(
+                        value: themeProvider.isDarkMode,
+                        onChanged: (isOn) {
+                          themeProvider.toggleTheme(isOn);
+                        },
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+
+            /// FORM LOGIN + VERSI
+            Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 20,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
+                    /// LOGO
                     Container(
-                      width: 60,
-                      height: 60,
+                      width: 80,
+                      height: 80,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         image: const DecorationImage(
                           image: AssetImage('assets/logo/logo_clear_100kb.png'),
                           fit: BoxFit.cover,
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: CupertinoColors.systemGrey.withOpacity(0.4),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Text(
-                          "E-Absensi",
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.black87,
+                    const SizedBox(height: 12),
+                    Text(
+                      "E-Absensi",
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color:
+                            CupertinoTheme.brightnessOf(context) ==
+                                Brightness.dark
+                            ? CupertinoColors.white
+                            : CupertinoColors.black,
+                      ),
+                    ),
+                    Text(
+                      "RS PKU Muhammadiyah Sukoharjo",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color:
+                            CupertinoTheme.brightnessOf(context) ==
+                                Brightness.dark
+                            ? CupertinoColors.white
+                            : CupertinoColors.black,
+                      ),
+                    ),
+
+                    const SizedBox(height: 50),
+
+                    /// USERNAME
+                    CupertinoTextField(
+                      controller: usernameController,
+                      placeholder: 'Username',
+                      style: TextStyle(
+                        color:
+                            CupertinoTheme.brightnessOf(context) ==
+                                Brightness.dark
+                            ? CupertinoColors.white
+                            : CupertinoColors.black,
+                      ),
+                      prefix: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        child: Icon(
+                          CupertinoIcons.person,
+                          color: CupertinoColors.systemGrey,
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemGrey6,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: CupertinoColors.systemGrey.withOpacity(0.2),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    /// PASSWORD
+                    CupertinoTextField(
+                      controller: passwordController,
+                      placeholder: 'Password',
+                      style: TextStyle(
+                        color:
+                            CupertinoTheme.brightnessOf(context) ==
+                                Brightness.dark
+                            ? CupertinoColors.white
+                            : CupertinoColors.black,
+                      ),
+                      obscureText: _obscurePassword,
+                      prefix: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        child: Icon(
+                          CupertinoIcons.lock,
+                          color: CupertinoColors.systemGrey,
+                        ),
+                      ),
+                      suffix: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Icon(
+                            _obscurePassword
+                                ? CupertinoIcons.eye
+                                : CupertinoIcons.eye_slash,
+                            color: CupertinoColors.systemGrey,
                           ),
                         ),
-                        Text(
-                          "RS PKU Muhammadiyah Sukoharjo",
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: CupertinoColors.activeBlue,
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemGrey6,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: CupertinoColors.systemGrey.withOpacity(0.2),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ],
-                ),
 
-                const SizedBox(height: 40),
+                    const SizedBox(height: 40),
 
-                // USERNAME
-                CupertinoTextField(
-                  controller: usernameController,
-                  placeholder: 'Masukkan Username',
-                  prefix: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Icon(
-                      CupertinoIcons.person,
-                      color: CupertinoColors.systemGrey,
+                    /// TOMBOL MASUK
+                    SizedBox(
+                      width: double.infinity,
+                      child: CupertinoButton.filled(
+                        borderRadius: BorderRadius.circular(8),
+                        color: CupertinoColors.activeBlue.withOpacity(0.8),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        onPressed: isLoading ? null : login,
+                        child: isLoading
+                            ? const CupertinoActivityIndicator()
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Icon(
+                                    CupertinoIcons.arrow_right_circle_fill,
+                                    size: 20,
+                                    color: CupertinoColors.white,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    "MASUK",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: CupertinoColors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
                     ),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: CupertinoColors.systemGrey6,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
 
-                const SizedBox(height: 16),
+                    const SizedBox(height: 60),
 
-                // PASSWORD
-                CupertinoTextField(
-                  controller: passwordController,
-                  placeholder: 'Masukkan Password',
-                  obscureText: _obscurePassword,
-                  prefix: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Icon(
-                      CupertinoIcons.lock,
-                      color: CupertinoColors.systemGrey,
-                    ),
-                  ),
-                  suffix: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                      child: Icon(
-                        _obscurePassword
-                            ? CupertinoIcons.eye
-                            : CupertinoIcons.eye_slash,
+                    /// VERSI DI PALING BAWAH
+                    Text(
+                      _appVersion,
+                      style: TextStyle(
+                        fontSize: 12,
                         color: CupertinoColors.systemGrey,
                       ),
                     ),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: CupertinoColors.systemGrey6,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  ],
                 ),
-
-                const SizedBox(height: 30),
-
-                // Row(
-                //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                //   children: const [
-                //     Text(
-                //       "Butuh Bantuan?",
-                //       style: TextStyle(
-                //         color: CupertinoColors.activeBlue,
-                //         fontSize: 14,
-                //       ),
-                //     ),
-                //     Text(
-                //       "Lupa Password",
-                //       style: TextStyle(
-                //         color: CupertinoColors.activeBlue,
-                //         fontSize: 14,
-                //       ),
-                //     ),
-                //   ],
-                // ),
-                // const SizedBox(height: 30),
-                SizedBox(
-                  width: double.infinity,
-                  child: CupertinoButton(
-                    color: CupertinoColors
-                        .activeBlue, // Ganti dengan warna yang kamu mau
-                    disabledColor:
-                        CupertinoColors.inactiveGray, // Jika tombol disabled
-                    onPressed: isLoading ? null : login,
-                    child: isLoading
-                        ? const CupertinoActivityIndicator()
-                        : const Text(
-                            "MASUK",
-                            style: TextStyle(
-                              color: Color.fromARGB(255, 255, 255, 255),
-                              fontSize: 14,
-                            ),
-                          ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

@@ -1,5 +1,5 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show Icons;
+import 'package:flutter/material.dart' show Icons, Colors;
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -16,7 +16,39 @@ class JadwalPage extends StatefulWidget {
 class _JadwalPageState extends State<JadwalPage> {
   DateTime selectedDate = DateTime.now();
   Map<String, String> jadwalData = {};
+  Map<String, String> refShift = {};
+  Map<String, String> iconMap = {};
+  Map<String, String> colorMap = {};
+  Map<String, dynamic> flowData = {};
   bool isLoading = true;
+
+  // Helper mapping icon
+  IconData? getIconData(String? name) {
+    switch (name) {
+      case 'check_mark_circled_solid':
+        return CupertinoIcons.check_mark_circled_solid;
+      case 'check_mark_circled':
+        return CupertinoIcons.check_mark_circled;
+      case 'minus_circle_fill':
+        return CupertinoIcons.minus_circle_fill;
+      default:
+        return null;
+    }
+  }
+
+  // Helper mapping color
+  Color? getColor(String? name) {
+    switch (name) {
+      case 'activeGreen':
+        return CupertinoColors.activeGreen;
+      case 'systemGrey2':
+        return CupertinoColors.systemGrey2;
+      case 'systemRed':
+        return CupertinoColors.systemRed;
+      default:
+        return null;
+    }
+  }
 
   @override
   void initState() {
@@ -33,7 +65,13 @@ class _JadwalPageState extends State<JadwalPage> {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        setState(() => jadwalData = Map<String, String>.from(data['jadwal']));
+        setState(() {
+          jadwalData = Map<String, String>.from(data['jadwal']);
+          refShift = Map<String, String>.from(data['ref_shift']);
+          iconMap = Map<String, String>.from(data['icon']);
+          colorMap = Map<String, String>.from(data['color']);
+          flowData = Map<String, dynamic>.from(data['flow']);
+        });
       } else {
         debugPrint('Gagal mengambil jadwal');
       }
@@ -49,7 +87,7 @@ class _JadwalPageState extends State<JadwalPage> {
       context: context,
       builder: (_) => CupertinoAlertDialog(
         title: const Text("Detail Jadwal"),
-        content: Text("Keterangan: ${statusLabel(status)}"),
+        content: Text("Keterangan: ${refShift[status] ?? status}"),
         actions: [
           CupertinoDialogAction(
             isDefaultAction: true,
@@ -61,50 +99,22 @@ class _JadwalPageState extends State<JadwalPage> {
     );
   }
 
-  String statusLabel(String code) {
-    switch (code) {
-      case 'H':
-        return 'Masuk Shift Siang';
-      case 'L':
-        return 'Libur';
-      case 'CU':
-        return 'Cuti Umum';
-      case 'CM':
-        return 'Cuti Melahirkan';
-      case 'C':
-        return 'Cuti';
-      case 'CD':
-        return 'Cuti Dispensasi';
-      case 'A':
-        return 'Alpha';
-      default:
-        return code;
-    }
-  }
-
   Widget buildDateCell(DateTime date, bool isCurrentMonth) {
     final key = date.day.toString().padLeft(2, '0');
     final status = isCurrentMonth ? jadwalData[key] : null;
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     Icon? icon;
 
-    if (status == 'H') {
-      icon = const Icon(
-        CupertinoIcons.check_mark_circled_solid,
-        color: CupertinoColors.activeGreen,
-        size: 12,
-      );
-    } else if (status == 'L') {
-      icon = const Icon(
-        CupertinoIcons.minus_circle_fill,
-        color: CupertinoColors.systemRed,
-        size: 12,
-      );
-    } else if (status != null) {
-      icon = const Icon(
-        CupertinoIcons.check_mark_circled,
-        color: CupertinoColors.systemGrey2,
-        size: 12,
-      );
+    if (status != null) {
+      final iconName = iconMap[status];
+      final colorName = colorMap[status];
+
+      final iconData = getIconData(iconName);
+      final iconColor = getColor(colorName);
+
+      if (iconData != null && iconColor != null) {
+        icon = Icon(iconData, color: iconColor, size: 12);
+      }
     }
 
     return GestureDetector(
@@ -112,7 +122,9 @@ class _JadwalPageState extends State<JadwalPage> {
       child: Container(
         constraints: const BoxConstraints(minHeight: 50),
         decoration: BoxDecoration(
-          color: CupertinoColors.white,
+          color: isDark
+              ? CupertinoColors.secondaryLabel
+              : CupertinoColors.white,
           borderRadius: BorderRadius.circular(8),
         ),
         padding: const EdgeInsets.symmetric(vertical: 4),
@@ -123,9 +135,13 @@ class _JadwalPageState extends State<JadwalPage> {
               '${date.day}',
               style: TextStyle(
                 fontSize: 12,
-                color: isCurrentMonth
-                    ? CupertinoColors.black
-                    : CupertinoColors.systemGrey,
+                color: isDark
+                    ? (isCurrentMonth
+                          ? CupertinoColors.white
+                          : CupertinoColors.systemGrey)
+                    : (isCurrentMonth
+                          ? CupertinoColors.black
+                          : CupertinoColors.systemGrey),
               ),
             ),
             const SizedBox(height: 2),
@@ -137,6 +153,7 @@ class _JadwalPageState extends State<JadwalPage> {
   }
 
   Widget buildCalendar() {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     final firstDay = DateTime(selectedDate.year, selectedDate.month, 1);
     final totalDays = DateTime(
       selectedDate.year,
@@ -167,17 +184,25 @@ class _JadwalPageState extends State<JadwalPage> {
     }
 
     final weekdays = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+    final entries = refShift.entries.toList();
+    final half = (entries.length / 2).ceil();
+    final leftItems = entries.sublist(0, half);
+    final rightItems = entries.sublist(half);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
           decoration: BoxDecoration(
-            color: CupertinoColors.white,
+            color: isDark
+                ? CupertinoColors.secondaryLabel
+                : CupertinoColors.white,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
-                color: CupertinoColors.systemGrey4,
+                color: isDark
+                    ? CupertinoColors.black
+                    : CupertinoColors.black.withOpacity(0.2),
                 blurRadius: 6,
                 offset: Offset(0, 3),
               ),
@@ -227,11 +252,15 @@ class _JadwalPageState extends State<JadwalPage> {
           width: double.infinity,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: CupertinoColors.white,
+            color: isDark
+                ? CupertinoColors.secondaryLabel
+                : CupertinoColors.white,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
-                color: CupertinoColors.systemGrey4,
+                color: isDark
+                    ? CupertinoColors.black
+                    : CupertinoColors.black.withOpacity(0.2),
                 blurRadius: 6,
                 offset: Offset(0, 3),
               ),
@@ -239,79 +268,216 @@ class _JadwalPageState extends State<JadwalPage> {
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                "Keterangan :",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: CupertinoColors.black,
+            children: [
+              Center(
+                child: Text(
+                  "Keterangan Shift",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? CupertinoColors.white
+                        : CupertinoColors.black,
+                  ),
                 ),
               ),
-              SizedBox(height: 6),
+              const SizedBox(height: 12),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    CupertinoIcons.check_mark_circled_solid,
-                    size: 14,
-                    color: CupertinoColors.activeGreen,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: leftItems.map((entry) {
+                        final code = entry.key;
+                        final label = entry.value;
+                        final iconData = getIconData(iconMap[code]);
+                        final iconColor = getColor(colorMap[code]);
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              Icon(
+                                iconData ?? CupertinoIcons.question_circle,
+                                size: 14,
+                                color: iconColor ?? CupertinoColors.systemGrey,
+                              ),
+                              const SizedBox(width: 4),
+                              Flexible(child: Text(label)),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
                   ),
-                  SizedBox(width: 4),
-                  Text("Masuk Shift"),
-                  SizedBox(width: 12),
-                  Icon(
-                    CupertinoIcons.check_mark_circled,
-                    size: 14,
-                    color: CupertinoColors.systemGrey2,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: rightItems.map((entry) {
+                        final code = entry.key;
+                        final label = entry.value;
+                        final iconData = getIconData(iconMap[code]);
+                        final iconColor = getColor(colorMap[code]);
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              Icon(
+                                iconData ?? CupertinoIcons.question_circle,
+                                size: 14,
+                                color: iconColor ?? CupertinoColors.systemGrey,
+                              ),
+                              const SizedBox(width: 4),
+                              Flexible(child: Text(label)),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
                   ),
-                  SizedBox(width: 4),
-                  Text("Masuk Shift (Lainnya)"),
-                  SizedBox(width: 12),
-                  Icon(
-                    CupertinoIcons.minus_circle_fill,
-                    size: 14,
-                    color: CupertinoColors.systemRed,
-                  ),
-                  SizedBox(width: 4),
-                  Text("Libur/Cuti"),
                 ],
               ),
             ],
           ),
         ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isDark
+                ? CupertinoColors.secondaryLabel
+                : CupertinoColors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: isDark
+                    ? CupertinoColors.black
+                    : CupertinoColors.black.withOpacity(0.2),
+                blurRadius: 6,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Text(
+                  "Keterangan Jadwal",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? CupertinoColors.white
+                        : CupertinoColors.black,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...flowData.entries.map((entry) {
+                final key = entry.key;
+                final value = entry.value;
+
+                if (key == 'staf' && value is List) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Daftar Staf : ",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        ...value.map<Widget>(
+                          (staf) => Padding(
+                            padding: const EdgeInsets.only(left: 8, bottom: 2),
+                            child: Text(
+                              "- $staf",
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                } else {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Text(
+                            "$key",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 7,
+                          child: Text(
+                            ": $value",
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              }).toList(),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
       ],
     );
   }
 
   void _showMonthPicker() async {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     DateTime tempDate = selectedDate;
     await showCupertinoModalPopup(
       context: context,
-      builder: (_) => Container(
-        height: 300,
-        color: CupertinoColors.systemBackground,
-        child: Column(
-          children: [
-            SizedBox(
-              height: 250,
-              child: CupertinoDatePicker(
-                mode: CupertinoDatePickerMode.date,
-                initialDateTime: selectedDate,
-                maximumDate: DateTime.now().add(const Duration(days: 365)),
-                onDateTimeChanged: (date) => tempDate = date,
+      builder: (_) => SafeArea(
+        child: Container(
+          height: 300,
+          color: isDark
+              ? CupertinoColors.secondaryLabel
+              : CupertinoColors.systemBackground,
+          child: Column(
+            children: [
+              SizedBox(
+                height: 250,
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.date,
+                  initialDateTime: selectedDate,
+                  maximumDate: DateTime.now().add(const Duration(days: 365)),
+                  onDateTimeChanged: (date) => tempDate = date,
+                ),
               ),
-            ),
-            CupertinoButton(
-              child: const Text("Terapkan"),
-              onPressed: () {
-                Navigator.of(context).pop();
-                setState(() {
-                  selectedDate = tempDate;
-                });
-                fetchJadwal();
-              },
-            ),
-          ],
+              CupertinoButton(
+                child: const Text("Terapkan Tanggal"),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  setState(() {
+                    selectedDate = tempDate;
+                  });
+                  fetchJadwal();
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -321,7 +487,19 @@ class _JadwalPageState extends State<JadwalPage> {
   Widget build(BuildContext context) {
     final formatter = DateFormat('MMMM yyyy', 'id');
     return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(middle: Text('Jadwal Saya')),
+      navigationBar: CupertinoNavigationBar(
+        middle: Text(
+          'Jadwal Saya',
+          style: TextStyle(
+            color: CupertinoTheme.brightnessOf(context) == Brightness.dark
+                ? CupertinoColors.systemGrey2
+                : CupertinoColors.black,
+          ),
+        ),
+        backgroundColor: CupertinoTheme.brightnessOf(context) == Brightness.dark
+            ? CupertinoColors.transparent
+            : CupertinoColors.systemGrey4.withOpacity(0.1),
+      ),
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12),

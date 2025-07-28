@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'login_page.dart';
@@ -58,7 +59,6 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   Future<void> startSplash() async {
     await Future.wait([
       Future.delayed(const Duration(seconds: 3)), // delay minimal splash
-      // Bisa tambahkan future lain misal preload data / check token
     ]);
 
     if (!mounted) return;
@@ -68,10 +68,49 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark
+          ? CupertinoColors.black.withOpacity(0.5)
+          : CupertinoColors.white,
       body: Stack(
         children: [
+          // Teks atas tengah dengan fade in
+          Positioned(
+            top: 80,
+            left: 0,
+            right: 0,
+            child: AnimatedOpacity(
+              opacity: opacity,
+              duration: const Duration(milliseconds: 800),
+              child: Column(
+                children: [
+                  Text(
+                    'E-Absensi',
+                    style: TextStyle(
+                      fontSize: 33,
+                      color: isDark
+                          ? CupertinoColors.white
+                          : CupertinoColors.black,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'RS PKU Muhammadiyah Sukoharjo',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark
+                          ? CupertinoColors.white
+                          : CupertinoColors.black,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
           // Animasi tengah
           Center(
             child: AnimatedOpacity(
@@ -83,33 +122,44 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                 curve: Curves.easeOutBack,
                 child: Lottie.asset(
                   'assets/lottie/loading.json',
-                  width: 200,
+                  width: 300,
                   repeat: true,
                 ),
               ),
             ),
           ),
 
-          // Teks bawah tengah
+          // Teks bawah tengah dengan fade in
           Positioned(
             bottom: 40,
             left: 0,
             right: 0,
-            child: Column(
-              children: const [
-                Text(
-                  'E-Absensi',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.black54,
-                    fontWeight: FontWeight.w500,
+            child: AnimatedOpacity(
+              opacity: opacity,
+              duration: const Duration(milliseconds: 800),
+              child: Column(
+                children: [
+                  Text(
+                    '@ 2025 . Sakudewa Tech',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark
+                          ? CupertinoColors.white
+                          : CupertinoColors.black,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-                Text(
-                  'Version 3.1',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
+                  Text(
+                    'Version 3.1',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark
+                          ? CupertinoColors.white
+                          : CupertinoColors.black,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

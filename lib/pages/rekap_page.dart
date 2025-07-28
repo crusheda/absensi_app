@@ -185,15 +185,20 @@ class _RekapPageState extends State<RekapPage> {
     Color color, {
     bool loading = false,
   }) {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: CupertinoColors.white,
+          color: isDark
+              ? CupertinoColors.secondaryLabel
+              : CupertinoColors.white,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-              color: CupertinoColors.systemGrey4,
+              color: isDark
+                  ? CupertinoColors.black
+                  : CupertinoColors.systemGrey4,
               blurRadius: 6,
               offset: Offset(0, 3),
             ),
@@ -203,9 +208,11 @@ class _RekapPageState extends State<RekapPage> {
           children: [
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: CupertinoColors.black,
+                color: isDark
+                    ? CupertinoColors.systemGrey4
+                    : CupertinoColors.black,
               ),
               textAlign: TextAlign.center,
             ),
@@ -228,41 +235,54 @@ class _RekapPageState extends State<RekapPage> {
   }
 
   Widget _buildFilterPicker(BuildContext context) {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: CupertinoButton(
         padding: const EdgeInsets.symmetric(vertical: 12),
-        color: CupertinoColors.systemGrey6,
+        color: isDark ? CupertinoColors.systemGrey6 : CupertinoColors.white,
         borderRadius: BorderRadius.circular(12),
         onPressed: () {
           showCupertinoModalPopup(
             context: context,
             builder: (BuildContext context) => CupertinoActionSheet(
-              title: const Text('Pilih Rentang Waktu'),
-              actions: filterOptions.entries.map((entry) {
-                return CupertinoActionSheetAction(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    setState(() {
-                      selectedFilter = entry.key;
-                    });
-                    fetchRiwayat();
-                  },
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(entry.value),
-                      if (selectedFilter == entry.key)
-                        const Icon(CupertinoIcons.check_mark, size: 18),
-                    ],
-                  ),
-                );
-              }).toList(),
-              cancelButton: CupertinoActionSheetAction(
-                onPressed: () => Navigator.pop(context),
-                isDefaultAction: true,
-                child: const Text('Batal'),
-              ),
+              title: Text('Pilih Rentang Waktu'),
+              actions: [
+                ...filterOptions.entries.map((entry) {
+                  return CupertinoActionSheetAction(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      setState(() {
+                        selectedFilter = entry.key;
+                      });
+                      fetchRiwayat();
+                    },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          entry.value,
+                          style: TextStyle(
+                            color:
+                                CupertinoTheme.brightnessOf(context) ==
+                                    Brightness.dark
+                                ? CupertinoColors.systemGrey2
+                                : CupertinoColors.black,
+                          ),
+                        ),
+                        if (selectedFilter == entry.key)
+                          const Icon(CupertinoIcons.check_mark, size: 18),
+                      ],
+                    ),
+                  );
+                }),
+                const SizedBox(height: 12), // Spacer ke atas agar tidak mentok
+                CupertinoActionSheetAction(
+                  onPressed: () => Navigator.pop(context),
+                  isDefaultAction: true,
+                  child: const Text('Batal'),
+                ),
+              ],
             ),
           );
         },
@@ -273,8 +293,10 @@ class _RekapPageState extends State<RekapPage> {
             children: [
               Text(
                 filterOptions[selectedFilter] ?? 'Pilih Filter',
-                style: const TextStyle(
-                  color: CupertinoColors.black,
+                style: TextStyle(
+                  color: CupertinoTheme.brightnessOf(context) == Brightness.dark
+                      ? CupertinoColors.systemGrey2
+                      : CupertinoColors.systemGrey,
                   fontSize: 15,
                 ),
               ),
@@ -303,15 +325,27 @@ class _RekapPageState extends State<RekapPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text('Rekapitulasi Absensi'),
+      navigationBar: CupertinoNavigationBar(
+        middle: Text(
+          'Rekapitulasi Absensi',
+          style: TextStyle(
+            color: CupertinoTheme.brightnessOf(context) == Brightness.dark
+                ? CupertinoColors.systemGrey2
+                : CupertinoColors.black,
+          ),
+        ),
+        backgroundColor: CupertinoTheme.brightnessOf(context) == Brightness.dark
+            ? CupertinoColors.transparent
+            : CupertinoColors.systemGrey4.withOpacity(0),
       ),
       child: SafeArea(
         child: Stack(
           children: [
             Column(
               children: [
+                const SizedBox(height: 12),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
@@ -375,12 +409,14 @@ class _RekapPageState extends State<RekapPage> {
                           child: CupertinoActivityIndicator(radius: 14),
                         )
                       : (riwayat.isEmpty
-                            ? const Center(
+                            ? Center(
                                 child: Text(
                                   "Data Absensi tidak ada",
                                   style: TextStyle(
                                     fontSize: 16,
-                                    color: CupertinoColors.systemGrey,
+                                    color: isDark
+                                        ? CupertinoColors.systemGrey4
+                                        : CupertinoColors.systemGrey,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -425,11 +461,15 @@ class _RekapPageState extends State<RekapPage> {
 
                                   return Container(
                                     decoration: BoxDecoration(
-                                      color: CupertinoColors.white,
+                                      color: isDark
+                                          ? CupertinoColors.secondaryLabel
+                                          : CupertinoColors.white,
                                       borderRadius: BorderRadius.circular(12),
-                                      boxShadow: const [
+                                      boxShadow: [
                                         BoxShadow(
-                                          color: CupertinoColors.systemGrey4,
+                                          color: isDark
+                                              ? CupertinoColors.black
+                                              : CupertinoColors.systemGrey4,
                                           blurRadius: 6,
                                           offset: Offset(0, 3),
                                         ),
@@ -438,7 +478,9 @@ class _RekapPageState extends State<RekapPage> {
                                     child: CupertinoButton(
                                       padding: const EdgeInsets.all(12),
                                       borderRadius: BorderRadius.circular(12),
-                                      color: CupertinoColors.white,
+                                      color: isDark
+                                          ? CupertinoColors.transparent
+                                          : CupertinoColors.white,
                                       onPressed: () async {
                                         showDialog(
                                           context: context,
@@ -447,14 +489,19 @@ class _RekapPageState extends State<RekapPage> {
                                             child: Container(
                                               padding: const EdgeInsets.all(20),
                                               decoration: BoxDecoration(
-                                                color:
-                                                    CupertinoColors.systemGrey6,
+                                                color: isDark
+                                                    ? CupertinoColors
+                                                          .secondaryLabel
+                                                    : CupertinoColors
+                                                          .systemGrey6,
                                                 borderRadius:
                                                     BorderRadius.circular(16),
-                                                boxShadow: const [
+                                                boxShadow: [
                                                   BoxShadow(
-                                                    color: CupertinoColors
-                                                        .systemGrey,
+                                                    color: isDark
+                                                        ? CupertinoColors.black
+                                                        : CupertinoColors
+                                                              .systemGrey,
                                                     blurRadius: 10,
                                                     offset: Offset(0, 3),
                                                   ),
@@ -504,18 +551,23 @@ class _RekapPageState extends State<RekapPage> {
                                                 ),
                                                 Text(
                                                   formatTanggal(item.tglIn),
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                     fontSize: 12,
-                                                    color: CupertinoColors
-                                                        .systemGrey,
+                                                    color: isDark
+                                                        ? CupertinoColors
+                                                              .systemGrey4
+                                                        : CupertinoColors
+                                                              .systemGrey,
                                                   ),
                                                 ),
                                               ],
                                             ),
                                           ),
-                                          const Icon(
+                                          Icon(
                                             CupertinoIcons.chevron_forward,
-                                            color: Color(0xFF2E2E2E),
+                                            color: isDark
+                                                ? CupertinoColors.systemGrey4
+                                                : Color(0xFF2E2E2E),
                                           ),
                                         ],
                                       ),

@@ -247,6 +247,7 @@ class _DashboardPageState extends State<DashboardPage> {
         ? '${ApiService.simrsUrl}/storage/${widget.fotoProfil.replaceFirst('public/', '')}'
         : null;
     final fotoUrlAdminJadwal = dashboard?.jadwal?.fotoPegawai;
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
 
     return CupertinoPageScaffold(
       child: SafeArea(
@@ -261,13 +262,13 @@ class _DashboardPageState extends State<DashboardPage> {
                     Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        boxShadow: const [
-                          BoxShadow(
-                            color: CupertinoColors.systemGrey4,
-                            blurRadius: 6,
-                            offset: Offset(0, 3),
-                          ),
-                        ],
+                        // boxShadow: const [
+                        //   BoxShadow(
+                        //     color: CupertinoColors.systemGrey4,
+                        //     blurRadius: 6,
+                        //     offset: Offset(0, 3),
+                        //   ),
+                        // ],
                       ),
                       child: CircleAvatar(
                         radius: 24,
@@ -308,29 +309,34 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                     margin: const EdgeInsets.only(bottom: 20),
                     decoration: BoxDecoration(
-                      color: CupertinoColors.systemGrey6.withOpacity(0.85),
+                      color: isDark
+                          ? CupertinoColors.tertiaryLabel
+                          : CupertinoColors.systemGrey6.withOpacity(0.85),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       children: [
-                        const CupertinoActivityIndicator(radius: 10),
-                        const SizedBox(width: 8),
-                        const Text(
+                        // const CupertinoActivityIndicator(radius: 10),
+                        // const SizedBox(width: 8),
+                        Text(
                           "Memuat Dashboard...",
                           style: TextStyle(
                             fontSize: 13,
-                            color: CupertinoColors.black,
+                            color: isDark
+                                ? CupertinoColors.systemGrey4
+                                : CupertinoColors.black,
                           ),
                         ),
                         const Spacer(),
-                        Text(
-                          "$loadingProgress%",
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: CupertinoColors.black,
-                          ),
-                        ),
+                        const CupertinoActivityIndicator(radius: 10),
+                        // Text(
+                        //   "$loadingProgress%",
+                        //   style: const TextStyle(
+                        //     fontSize: 13,
+                        //     fontWeight: FontWeight.bold,
+                        //     color: CupertinoColors.black,
+                        //   ),
+                        // ),
                       ],
                     ),
                   ),
@@ -380,7 +386,10 @@ class _DashboardPageState extends State<DashboardPage> {
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: CupertinoColors.white,
+                            color: isDark
+                                ? CupertinoColors.darkBackgroundGray
+                                      .withOpacity(0.5)
+                                : CupertinoColors.white,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Column(
@@ -400,8 +409,10 @@ class _DashboardPageState extends State<DashboardPage> {
                                   'dd',
                                   'id_ID',
                                 ).format(DateTime.now()),
-                                style: const TextStyle(
-                                  color: CupertinoColors.activeBlue,
+                                style: TextStyle(
+                                  color: isDark
+                                      ? CupertinoColors.white
+                                      : CupertinoColors.activeBlue,
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -486,6 +497,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 Row(
                   children: [
                     _buildSquareStat(
+                      context,
                       "Tepat Waktu",
                       isRetrying
                           ? const CupertinoActivityIndicator(radius: 8)
@@ -497,9 +509,11 @@ class _DashboardPageState extends State<DashboardPage> {
                                 color: CupertinoColors.activeBlue,
                               ),
                             ),
-                      CupertinoColors.activeBlue,
+                      CupertinoColors
+                          .activeBlue, // kalau kamu perlu param color lain
                     ),
                     _buildSquareStat(
+                      context,
                       "Absen 1x/hr",
                       isRetrying
                           ? const CupertinoActivityIndicator(radius: 8)
@@ -514,6 +528,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       CupertinoColors.systemOrange,
                     ),
                     _buildSquareStat(
+                      context,
                       "Terlambat",
                       isRetrying
                           ? const CupertinoActivityIndicator(radius: 8)
@@ -528,6 +543,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       CupertinoColors.systemRed,
                     ),
                     _buildSquareStat(
+                      context,
                       "Ijin",
                       isRetrying
                           ? const CupertinoActivityIndicator(radius: 8)
@@ -548,10 +564,18 @@ class _DashboardPageState extends State<DashboardPage> {
                     ? Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: CupertinoColors.white,
+                          color: isDark
+                              ? CupertinoColors.secondaryLabel
+                              : CupertinoColors.white,
                           borderRadius: BorderRadius.circular(16),
-                          boxShadow: const [
-                            BoxShadow(color: Color(0x22000000), blurRadius: 4),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isDark
+                                  ? CupertinoColors.black
+                                  : CupertinoColors.black.withOpacity(0.2),
+                              blurRadius: 4,
+                              offset: const Offset(0, 3),
+                            ),
                           ],
                         ),
                         child: Row(
@@ -648,7 +672,14 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildSquareStat(String label, Widget content, Color color) {
+  Widget _buildSquareStat(
+    BuildContext context,
+    String label,
+    Widget content,
+    Color color, // tetap bisa passing accent color
+  ) {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+
     return Expanded(
       child: AspectRatio(
         aspectRatio: 1,
@@ -656,13 +687,17 @@ class _DashboardPageState extends State<DashboardPage> {
           margin: const EdgeInsets.symmetric(horizontal: 4),
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: CupertinoColors.white,
+            color: isDark
+                ? CupertinoColors.secondaryLabel
+                : CupertinoColors.white,
             borderRadius: BorderRadius.circular(12),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
-                color: CupertinoColors.systemGrey4,
+                color: isDark
+                    ? CupertinoColors.black
+                    : CupertinoColors.black.withOpacity(0.2),
                 blurRadius: 4,
-                offset: Offset(0, 3),
+                offset: const Offset(0, 3),
               ),
             ],
           ),
@@ -674,7 +709,10 @@ class _DashboardPageState extends State<DashboardPage> {
               Text(
                 label,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 12),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? CupertinoColors.white : CupertinoColors.black,
+                ),
               ),
             ],
           ),
@@ -684,18 +722,44 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildActionTile(String title, IconData icon, Color color) {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: CupertinoColors.white,
+        color: isDark ? CupertinoColors.secondaryLabel : CupertinoColors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: const [BoxShadow(color: Color(0x11000000), blurRadius: 4)],
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? CupertinoColors.black
+                : CupertinoColors.black.withOpacity(0.2),
+            blurRadius: 4,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: CupertinoButton(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         onPressed: () {
           if (title == "Riwayat Absensi") {
             MainPageController.changeTab?.call(3); // Pindah ke tab Rekap
+          } else if (title == "Tata Cara Absensi") {
+            showCupertinoDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return CupertinoAlertDialog(
+                  title: const Text("Ah, Maaf!"),
+                  content: const Text("Fitur belum tersedia untuk Saat ini :)"),
+                  actions: [
+                    CupertinoDialogAction(
+                      isDefaultAction: true,
+                      child: const Text("Tutup"),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                );
+              },
+            );
           }
         },
         child: Row(
@@ -705,9 +769,11 @@ class _DashboardPageState extends State<DashboardPage> {
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
-                  color: Color.fromARGB(255, 5, 5, 5),
+                  color: isDark
+                      ? CupertinoColors.systemGrey4
+                      : Color.fromARGB(255, 5, 5, 5),
                 ),
               ),
             ),
