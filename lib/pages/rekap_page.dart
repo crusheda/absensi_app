@@ -260,16 +260,7 @@ class _RekapPageState extends State<RekapPage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          entry.value,
-                          style: TextStyle(
-                            color:
-                                CupertinoTheme.brightnessOf(context) ==
-                                    Brightness.dark
-                                ? CupertinoColors.systemGrey2
-                                : CupertinoColors.black,
-                          ),
-                        ),
+                        Text(entry.value, style: TextStyle()),
                         if (selectedFilter == entry.key)
                           const Icon(CupertinoIcons.check_mark, size: 18),
                       ],

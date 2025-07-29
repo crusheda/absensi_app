@@ -116,7 +116,7 @@ class _SettingPageState extends State<SettingPage> {
           padding: const EdgeInsets.only(top: 12),
           child: Text(
             "Versi: $versi\nDeveloper: Yussuf Faisal, S.Kom\n\nAplikasi Absensi yang dibuat dengan sepenuh ♥️ untuk Pegawai RS PKU Muhammadiyah Sukoharjo berbasis Flutter. "
-            "Dilengkapi fitur GPS, validasi radius kantor, dan selfie kamera saat absen.",
+            "Dilengkapi fitur GPS, validasi radius kantor, dan kustom selfie kamera.",
             textAlign: TextAlign.justify,
             style: const TextStyle(fontSize: 12),
           ),
@@ -221,20 +221,6 @@ class _SettingPageState extends State<SettingPage> {
             Expanded(
               child: ListView(
                 children: [
-                  CupertinoListTile(
-                    leading: const Icon(CupertinoIcons.info),
-                    title: Text(
-                      'Tentang Aplikasi',
-                      style: TextStyle(
-                        color:
-                            CupertinoTheme.brightnessOf(context) ==
-                                Brightness.dark
-                            ? CupertinoColors.systemGrey2
-                            : CupertinoColors.systemGrey,
-                      ),
-                    ),
-                    onTap: _showTentangAplikasi,
-                  ),
                   const Divider(height: 1),
                   Padding(
                     padding: const EdgeInsets.symmetric(
@@ -321,31 +307,57 @@ class _SettingPageState extends State<SettingPage> {
                     ),
                   ),
                   const Divider(height: 1),
-                  CupertinoListTile(
-                    leading: const Icon(CupertinoIcons.bell),
-                    title: Text(
-                      'Tes Notifikasi E-Absensi',
-                      style: TextStyle(
-                        color:
-                            CupertinoTheme.brightnessOf(context) ==
-                                Brightness.dark
-                            ? CupertinoColors.systemGrey2
-                            : CupertinoColors.systemGrey,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                    ), // celah atas-bawah
+                    child: CupertinoListTile(
+                      leading: const Icon(CupertinoIcons.bell),
+                      title: Text(
+                        'Tes Notifikasi E-Absensi',
+                        style: TextStyle(
+                          color:
+                              CupertinoTheme.brightnessOf(context) ==
+                                  Brightness.dark
+                              ? CupertinoColors.systemGrey2
+                              : CupertinoColors.systemGrey,
+                        ),
                       ),
+                      onTap: _showDummyNotification,
                     ),
-                    onTap: _showDummyNotification,
                   ),
                   const Divider(height: 1),
-                  CupertinoListTile(
-                    leading: const Icon(
-                      CupertinoIcons.square_arrow_right,
-                      color: CupertinoColors.systemRed,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: CupertinoListTile(
+                      leading: const Icon(CupertinoIcons.info),
+                      title: Text(
+                        'Tentang Aplikasi',
+                        style: TextStyle(
+                          color:
+                              CupertinoTheme.brightnessOf(context) ==
+                                  Brightness.dark
+                              ? CupertinoColors.systemGrey2
+                              : CupertinoColors.systemGrey,
+                        ),
+                      ),
+                      onTap: _showTentangAplikasi,
                     ),
-                    title: const Text(
-                      'Logout',
-                      style: TextStyle(color: CupertinoColors.systemRed),
+                  ),
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: CupertinoListTile(
+                      leading: const Icon(
+                        CupertinoIcons.square_arrow_right,
+                        color: CupertinoColors.systemRed,
+                      ),
+                      title: const Text(
+                        'Logout',
+                        style: TextStyle(color: CupertinoColors.systemRed),
+                      ),
+                      onTap: _logout,
                     ),
-                    onTap: _logout,
                   ),
                 ],
               ),

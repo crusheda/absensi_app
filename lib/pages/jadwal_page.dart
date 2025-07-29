@@ -450,33 +450,49 @@ class _JadwalPageState extends State<JadwalPage> {
     await showCupertinoModalPopup(
       context: context,
       builder: (_) => SafeArea(
-        child: Container(
-          height: 300,
-          color: isDark
-              ? CupertinoColors.secondaryLabel
-              : CupertinoColors.systemBackground,
-          child: Column(
-            children: [
-              SizedBox(
-                height: 250,
-                child: CupertinoDatePicker(
-                  mode: CupertinoDatePickerMode.date,
-                  initialDateTime: selectedDate,
-                  maximumDate: DateTime.now().add(const Duration(days: 365)),
-                  onDateTimeChanged: (date) => tempDate = date,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 0), // tambahkan padding bawah
+          child: Container(
+            height: 380,
+            color: isDark
+                ? CupertinoColors.black.withOpacity(0.8)
+                : CupertinoColors.systemBackground,
+            child: Column(
+              children: [
+                SizedBox(
+                  height: 300,
+                  child: CupertinoDatePicker(
+                    mode: CupertinoDatePickerMode.date,
+                    initialDateTime: selectedDate,
+                    maximumDate: DateTime.now().add(const Duration(days: 365)),
+                    onDateTimeChanged: (date) => tempDate = date,
+                  ),
                 ),
-              ),
-              CupertinoButton(
-                child: const Text("Terapkan Tanggal"),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  setState(() {
-                    selectedDate = tempDate;
-                  });
-                  fetchJadwal();
-                },
-              ),
-            ],
+                CupertinoButton(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  color: isDark
+                      ? CupertinoColors.tertiaryLabel
+                      : CupertinoColors.systemGrey5,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Text(
+                    "      Terapkan Tanggal      ",
+                    style: TextStyle(
+                      color: isDark
+                          ? CupertinoColors.white
+                          : CupertinoColors.black,
+                      fontSize: 15,
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    setState(() {
+                      selectedDate = tempDate;
+                    });
+                    fetchJadwal();
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),

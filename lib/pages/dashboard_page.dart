@@ -498,7 +498,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   children: [
                     _buildSquareStat(
                       context,
-                      "Tepat Waktu",
+                      "Disiplin",
                       isRetrying
                           ? const CupertinoActivityIndicator(radius: 8)
                           : Text(
@@ -514,7 +514,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                     _buildSquareStat(
                       context,
-                      "Absen 1x/hr",
+                      "Absen 1x",
                       isRetrying
                           ? const CupertinoActivityIndicator(radius: 8)
                           : Text(

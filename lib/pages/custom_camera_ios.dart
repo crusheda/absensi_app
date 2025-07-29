@@ -230,6 +230,7 @@ class _CustomCameraIOSState extends State<CustomCameraIOS> {
                             ? CupertinoColors.white
                             : CupertinoColors.black,
                         fontSize: 18,
+                        decoration: TextDecoration.none,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -276,7 +277,7 @@ class _CustomCameraIOSState extends State<CustomCameraIOS> {
           Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 40, left: 20, right: 20),
+              padding: const EdgeInsets.only(bottom: 60, left: 20, right: 20),
               child: _capturedFile == null
                   ? Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -289,6 +290,7 @@ class _CustomCameraIOSState extends State<CustomCameraIOS> {
                                   ? CupertinoColors.white
                                   : CupertinoColors.black,
                               fontSize: 16,
+                              decoration: TextDecoration.none,
                               height: 1.4,
                             ),
                             textAlign: TextAlign.left,

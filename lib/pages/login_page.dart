@@ -128,6 +128,7 @@ class _LoginPageState extends State<LoginPage> {
                         themeProvider.isDarkMode ? 'Gelap' : 'Terang',
                         style: const TextStyle(
                           fontSize: 14,
+                          decoration: TextDecoration.none,
                           color: CupertinoColors.systemGrey,
                         ),
                       ),
@@ -179,6 +180,7 @@ class _LoginPageState extends State<LoginPage> {
                       style: TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.w800,
+                        decoration: TextDecoration.none,
                         color:
                             CupertinoTheme.brightnessOf(context) ==
                                 Brightness.dark
@@ -190,6 +192,7 @@ class _LoginPageState extends State<LoginPage> {
                       "RS PKU Muhammadiyah Sukoharjo",
                       style: TextStyle(
                         fontSize: 14,
+                        decoration: TextDecoration.none,
                         color:
                             CupertinoTheme.brightnessOf(context) ==
                                 Brightness.dark
@@ -324,6 +327,7 @@ class _LoginPageState extends State<LoginPage> {
                       _appVersion,
                       style: TextStyle(
                         fontSize: 12,
+                        decoration: TextDecoration.none,
                         color: CupertinoColors.systemGrey,
                       ),
                     ),

@@ -195,6 +195,7 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 16,
+                    decoration: TextDecoration.none,
                     fontWeight: FontWeight.bold,
                     color: titleColor,
                   ),
@@ -213,6 +214,7 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
                           style: TextStyle(
                             fontFamily: 'Poppins',
                             fontSize: 13,
+                            decoration: TextDecoration.none,
                             fontWeight: FontWeight.bold,
                             color: isDark
                                 ? CupertinoColors.systemGrey4
@@ -236,6 +238,7 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
                         style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 13,
+                          decoration: TextDecoration.none,
                           fontWeight: FontWeight.bold,
                           color: isDark
                               ? CupertinoColors.systemGrey4
@@ -258,6 +261,7 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
                         style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 13,
+                          decoration: TextDecoration.none,
                           fontWeight: FontWeight.bold,
                           color: isDark
                               ? CupertinoColors.systemGrey4
@@ -280,6 +284,7 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
                             text: "$infoTitle1 ",
                             style: TextStyle(
                               fontSize: 12,
+                              decoration: TextDecoration.none,
                               fontWeight: FontWeight.bold,
                               color: isDark
                                   ? CupertinoColors.systemGrey4
@@ -289,6 +294,7 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
                               TextSpan(
                                 text: infoValue1,
                                 style: const TextStyle(
+                                  decoration: TextDecoration.none,
                                   fontWeight: FontWeight.normal,
                                 ),
                               ),
@@ -313,6 +319,7 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.none,
                               color: isDark
                                   ? CupertinoColors.systemGrey4
                                   : CupertinoColors.black,
@@ -321,6 +328,7 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
                               TextSpan(
                                 text: infoValue2,
                                 style: const TextStyle(
+                                  decoration: TextDecoration.none,
                                   fontWeight: FontWeight.normal,
                                 ),
                               ),
@@ -345,6 +353,7 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.none,
                               color: isDark
                                   ? CupertinoColors.systemGrey4
                                   : CupertinoColors.black,
@@ -353,6 +362,7 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
                               TextSpan(
                                 text: lemburValue,
                                 style: const TextStyle(
+                                  decoration: TextDecoration.none,
                                   fontWeight: FontWeight.normal,
                                 ),
                               ),
@@ -391,6 +401,7 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
               fontFamily: 'Poppins',
               fontSize: 16,
               fontWeight: FontWeight.bold,
+              decoration: TextDecoration.none,
               color: isDark
                   ? CupertinoColors.systemGrey4
                   : CupertinoColors.black,
@@ -403,6 +414,7 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
             style: TextStyle(
               fontFamily: 'Poppins',
               fontSize: 14,
+              decoration: TextDecoration.none,
               color: isDark
                   ? CupertinoColors.systemGrey4
                   : CupertinoColors.black,
@@ -433,6 +445,7 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 14,
+                  decoration: TextDecoration.none,
                   fontWeight: FontWeight.bold,
                   color: isDark ? CupertinoColors.white : CupertinoColors.black,
                 ),
@@ -511,8 +524,8 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
           'Detail Absensi',
           style: TextStyle(
             color: CupertinoTheme.brightnessOf(context) == Brightness.dark
-                ? CupertinoColors.systemGrey2
-                : CupertinoColors.systemGrey,
+                ? CupertinoColors.white
+                : CupertinoColors.black,
           ),
         ),
         previousPageTitle: 'Kembali',
