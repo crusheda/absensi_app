@@ -287,11 +287,14 @@ class _DashboardPageState extends State<DashboardPage> {
                           "Selamat datang kembali,",
                           style: TextStyle(color: CupertinoColors.systemGrey),
                         ),
-                        Text(
-                          widget.nama ?? '-',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            '${widget.name} 👋',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              // fontSize: 12,
+                            ),
                           ),
                         ),
                       ],

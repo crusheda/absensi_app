@@ -1,9 +1,11 @@
+import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:provider/provider.dart';
+
 import '../theme_provider.dart';
 import '../services/api_service.dart';
 import 'login_page.dart';
@@ -79,9 +81,7 @@ class _SettingPageState extends State<SettingPage> {
 
   void _showDummyNotification() async {
     final status = await Permission.notification.request();
-    if (!status.isGranted) {
-      return;
-    }
+    if (!status.isGranted) return;
 
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
@@ -99,7 +99,7 @@ class _SettingPageState extends State<SettingPage> {
     await flutterLocalNotificationsPlugin.show(
       0,
       'Tes Notifikasi E-Absensi',
-      'Ini adalah contoh Notifikasi yang diberikan oleh Aplikasi E-Absensi. Tetap Semangat Absennya ya. :)',
+      'Ini contoh notifikasi dari E-Absensi. Semangat!',
       notificationDetails,
     );
   }
@@ -111,12 +111,11 @@ class _SettingPageState extends State<SettingPage> {
     showCupertinoDialog(
       context: context,
       builder: (_) => CupertinoAlertDialog(
-        title: const Text("Tentang Aplikasi"),
+        title: const Text("Tentang ♥️ Aplikasi"),
         content: Padding(
           padding: const EdgeInsets.only(top: 12),
           child: Text(
-            "Versi: $versi\nDeveloper: Yussuf Faisal, S.Kom\n\nAplikasi Absensi yang dibuat dengan sepenuh ♥️ untuk Pegawai RS PKU Muhammadiyah Sukoharjo berbasis Flutter. "
-            "Dilengkapi fitur GPS, validasi radius kantor, dan kustom selfie kamera.",
+            "Versi: $versi\nDeveloper: Yussuf Faisal, S.Kom\nRole: Full Stack Programmer\n\nE-Absensi adalah pengembangan dari Website Absensi Simrsmu yang berbasis Flutter (AndroidApps) dilengkapi dengan GPS, validasi radius, selfie kamera, dan masih banyak lagi.",
             textAlign: TextAlign.justify,
             style: const TextStyle(fontSize: 12),
           ),
@@ -136,7 +135,7 @@ class _SettingPageState extends State<SettingPage> {
     final confirm = await showCupertinoDialog<bool>(
       context: context,
       builder: (_) => CupertinoAlertDialog(
-        title: const Text('Konfirmasi Logout'),
+        title: const Text('Pesan Konfirmasi'),
         content: const Text('Apakah Anda yakin ingin keluar?'),
         actions: [
           CupertinoDialogAction(
@@ -158,22 +157,30 @@ class _SettingPageState extends State<SettingPage> {
     final success = await ApiService.logout();
 
     if (context.mounted) {
-      if (success) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          CupertinoPageRoute(builder: (_) => const LoginPage()),
-          (route) => false,
-        );
-      } else {
+      if (!success) {
         showCupertinoDialog(
           context: context,
           builder: (_) => const CupertinoAlertDialog(
             title: Text("Logout Gagal"),
-            content: Text("Terjadi kesalahan. Silakan coba lagi."),
+            content: Text("Terjadi kesalahan, tetap akan keluar."),
           ),
         );
+        await Future.delayed(const Duration(seconds: 1));
       }
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        CupertinoPageRoute(builder: (_) => const LoginPage()),
+        (route) => false,
+      );
     }
+  }
+
+  Widget _buildSwitchRow(String label, Widget switcher) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [Text(label), switcher],
+    );
   }
 
   @override
@@ -183,197 +190,229 @@ class _SettingPageState extends State<SettingPage> {
         ? '${ApiService.simrsUrl}/storage/${widget.fotoProfil.replaceFirst('public/', '')}'
         : null;
 
-    return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(
-        middle: Text(
-          'Pengaturan',
-          style: TextStyle(
-            color: CupertinoTheme.brightnessOf(context) == Brightness.dark
-                ? CupertinoColors.systemGrey2
-                : CupertinoColors.black,
-          ),
-        ),
-      ),
-      child: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
-            CircleAvatar(
-              radius: 42,
-              backgroundColor: CupertinoColors.systemGrey4,
-              backgroundImage: isFotoAda
-                  ? NetworkImage(fotoUrl!)
-                  : const AssetImage('assets/user.png') as ImageProvider,
-            ),
-            const SizedBox(height: 10),
-            Text(
-              widget.nama,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-            ),
-            Text(
-              'NIP: ${widget.nip}',
-              style: const TextStyle(
-                fontSize: 14,
-                color: CupertinoColors.systemGrey,
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+
+    return Scaffold(
+      // navigationBar: const CupertinoNavigationBar(middle: Text('Pengaturan')),
+      body: Stack(
+        children: [
+          // 🎨 BACKGROUND GRADIENT + BLUR
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isDark
+                      ? [Colors.black, Colors.grey.shade900]
+                      : [Colors.blue.shade50, Colors.white],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
               ),
             ),
-            const SizedBox(height: 30),
-            Expanded(
-              child: ListView(
+          ),
+          Positioned(
+            top: -50,
+            left: -50,
+            child: _blurCircle(Colors.blueAccent.withOpacity(0.2)),
+          ),
+          Positioned(
+            bottom: -60,
+            right: -40,
+            child: _blurCircle(Colors.purpleAccent.withOpacity(0.2)),
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: CupertinoNavigationBar(
+              middle: Text(
+                'Pengaturan',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: isDark
+                      ? CupertinoColors.systemGrey2
+                      : CupertinoColors.black,
+                ),
+              ),
+              backgroundColor: Colors.transparent,
+              border: null,
+            ),
+          ),
+          Positioned.fill(
+            top: kToolbarHeight, // biar tidak ketimpa navbar
+            child: SafeArea(
+              child: Column(
                 children: [
-                  const Divider(height: 1),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
+                  const SizedBox(height: 10),
+                  CircleAvatar(
+                    radius: 42,
+                    backgroundColor: CupertinoColors.systemGrey4,
+                    backgroundImage: isFotoAda
+                        ? NetworkImage(fotoUrl!)
+                        : const AssetImage('assets/user.png') as ImageProvider,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    widget.nama,
+                    style: const TextStyle(
+                      // fontSize: 20,
+                      fontWeight: FontWeight.w600,
                     ),
+                  ),
+                  Text(
+                    'NIP: ${widget.nip}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: CupertinoColors.systemGrey,
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  Expanded(
                     child: Column(
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Mode Gelap'),
-                            Consumer<ThemeProvider>(
-                              builder: (context, themeProvider, _) {
-                                return CupertinoSwitch(
-                                  value: themeProvider.isDarkMode,
-                                  onChanged: (isOn) {
-                                    themeProvider.toggleTheme(isOn);
+                        const Divider(height: 1),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                          child: Column(
+                            children: [
+                              _buildSwitchRow(
+                                'Mode Gelap',
+                                Consumer<ThemeProvider>(
+                                  builder: (context, themeProvider, _) {
+                                    return CupertinoSwitch(
+                                      value: themeProvider.isDarkMode,
+                                      onChanged: (isOn) {
+                                        themeProvider.toggleTheme(isOn);
+                                      },
+                                    );
                                   },
-                                );
-                              },
-                            ),
-                          ],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              _buildSwitchRow(
+                                'Izin Notifikasi',
+                                CupertinoSwitch(
+                                  value: notifAllowed,
+                                  onChanged: notifAllowed
+                                      ? null
+                                      : (value) async {
+                                          final status = await Permission
+                                              .notification
+                                              .request();
+                                          setState(() {
+                                            notifAllowed = status.isGranted;
+                                          });
+                                        },
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              _buildSwitchRow(
+                                'Izin GPS',
+                                CupertinoSwitch(
+                                  value: gpsAllowed,
+                                  onChanged: gpsAllowed
+                                      ? null
+                                      : (value) async {
+                                          final status = await Permission
+                                              .location
+                                              .request();
+                                          setState(() {
+                                            gpsAllowed = status.isGranted;
+                                          });
+                                        },
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              _buildSwitchRow(
+                                'Izin Kamera',
+                                CupertinoSwitch(
+                                  value: cameraAllowed,
+                                  onChanged: cameraAllowed
+                                      ? null
+                                      : (value) async {
+                                          final status = await Permission.camera
+                                              .request();
+                                          setState(() {
+                                            cameraAllowed = status.isGranted;
+                                          });
+                                        },
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Izin Notifikasi'),
-                            CupertinoSwitch(
-                              value: notifAllowed,
-                              onChanged: notifAllowed
-                                  ? null
-                                  : (value) async {
-                                      final status = await Permission
-                                          .notification
-                                          .request();
-                                      setState(() {
-                                        notifAllowed = status.isGranted;
-                                      });
-                                    },
+                        const Divider(height: 1),
+                        CupertinoListTile(
+                          leading: const Icon(CupertinoIcons.bell),
+                          title: Text(
+                            'Tes Notifikasi E-Absensi',
+                            style: TextStyle(
+                              color: isDark
+                                  ? CupertinoColors.white
+                                  : CupertinoColors.black,
                             ),
-                          ],
+                          ),
+                          onTap: _showDummyNotification,
                         ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Izin GPS'),
-                            CupertinoSwitch(
-                              value: gpsAllowed,
-                              onChanged: gpsAllowed
-                                  ? null
-                                  : (value) async {
-                                      final status = await Permission.location
-                                          .request();
-                                      setState(() {
-                                        gpsAllowed = status.isGranted;
-                                      });
-                                    },
+                        const Divider(height: 1),
+                        CupertinoListTile(
+                          leading: const Icon(CupertinoIcons.info),
+                          title: Text(
+                            'Tentang Aplikasi',
+                            style: TextStyle(
+                              color: isDark
+                                  ? CupertinoColors.white
+                                  : CupertinoColors.black,
                             ),
-                          ],
+                          ),
+                          onTap: _showTentangAplikasi,
                         ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Izin Kamera'),
-                            CupertinoSwitch(
-                              value: cameraAllowed,
-                              onChanged: cameraAllowed
-                                  ? null
-                                  : (value) async {
-                                      final status = await Permission.camera
-                                          .request();
-                                      setState(() {
-                                        cameraAllowed = status.isGranted;
-                                      });
-                                    },
-                            ),
-                          ],
+                        const Divider(height: 1),
+                        CupertinoListTile(
+                          leading: const Icon(
+                            CupertinoIcons.square_arrow_right,
+                            color: CupertinoColors.systemRed,
+                          ),
+                          title: const Text(
+                            'Logout',
+                            style: TextStyle(color: CupertinoColors.systemRed),
+                          ),
+                          onTap: _logout,
                         ),
                       ],
                     ),
                   ),
-                  const Divider(height: 1),
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 8,
-                    ), // celah atas-bawah
-                    child: CupertinoListTile(
-                      leading: const Icon(CupertinoIcons.bell),
-                      title: Text(
-                        'Tes Notifikasi E-Absensi',
-                        style: TextStyle(
-                          color:
-                              CupertinoTheme.brightnessOf(context) ==
-                                  Brightness.dark
-                              ? CupertinoColors.systemGrey2
-                              : CupertinoColors.systemGrey,
-                        ),
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      appVersion,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: CupertinoColors.systemGrey,
                       ),
-                      onTap: _showDummyNotification,
-                    ),
-                  ),
-                  const Divider(height: 1),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: CupertinoListTile(
-                      leading: const Icon(CupertinoIcons.info),
-                      title: Text(
-                        'Tentang Aplikasi',
-                        style: TextStyle(
-                          color:
-                              CupertinoTheme.brightnessOf(context) ==
-                                  Brightness.dark
-                              ? CupertinoColors.systemGrey2
-                              : CupertinoColors.systemGrey,
-                        ),
-                      ),
-                      onTap: _showTentangAplikasi,
-                    ),
-                  ),
-                  const Divider(height: 1),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: CupertinoListTile(
-                      leading: const Icon(
-                        CupertinoIcons.square_arrow_right,
-                        color: CupertinoColors.systemRed,
-                      ),
-                      title: const Text(
-                        'Logout',
-                        style: TextStyle(color: CupertinoColors.systemRed),
-                      ),
-                      onTap: _logout,
                     ),
                   ),
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(
-                appVersion,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: CupertinoColors.systemGrey,
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _blurCircle(Color color) {
+    return Container(
+      width: 200,
+      height: 200,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+        child: Container(color: Colors.transparent),
       ),
     );
   }

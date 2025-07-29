@@ -199,6 +199,11 @@ class ApiService {
       print("Body: ${response.body}");
 
       if (response.statusCode == 200) {
+        // Sukses logout
+        await prefs.remove('token');
+        return true;
+      } else if (response.statusCode == 401) {
+        // Token sudah expired/invalid → tetap hapus token lokal
         await prefs.remove('token');
         return true;
       } else {

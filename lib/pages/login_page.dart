@@ -175,18 +175,43 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Text(
-                      "E-Absensi",
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        decoration: TextDecoration.none,
-                        color:
-                            CupertinoTheme.brightnessOf(context) ==
-                                Brightness.dark
-                            ? CupertinoColors.white
-                            : CupertinoColors.black,
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'E-',
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
+                            color:
+                                CupertinoTheme.brightnessOf(context) ==
+                                    Brightness.dark
+                                ? CupertinoColors.white
+                                : CupertinoColors.black,
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                        ShaderMask(
+                          shaderCallback: (bounds) => LinearGradient(
+                            colors: [
+                              CupertinoColors.activeBlue,
+                              CupertinoColors.systemTeal,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ).createShader(bounds),
+                          child: Text(
+                            'Absensi',
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w800,
+                              color: Colors
+                                  .white, // HARUS white agar gradient terlihat
+                              decoration: TextDecoration.none,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     Text(
                       "RS PKU Muhammadiyah Sukoharjo",

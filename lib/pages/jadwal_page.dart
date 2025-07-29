@@ -21,6 +21,7 @@ class _JadwalPageState extends State<JadwalPage> {
   Map<String, String> colorMap = {};
   Map<String, dynamic> flowData = {};
   bool isLoading = true;
+  bool jadwalKosong = false;
 
   // Helper mapping icon
   IconData? getIconData(String? name) {
@@ -31,8 +32,10 @@ class _JadwalPageState extends State<JadwalPage> {
         return CupertinoIcons.check_mark_circled;
       case 'minus_circle_fill':
         return CupertinoIcons.minus_circle_fill;
+      case 'clear_circled':
+        return CupertinoIcons.clear_circled; // fallback, solid tidak ada
       default:
-        return null;
+        return CupertinoIcons.question_circle; // fallback kalau tidak cocok
     }
   }
 
@@ -41,12 +44,22 @@ class _JadwalPageState extends State<JadwalPage> {
     switch (name) {
       case 'activeGreen':
         return CupertinoColors.activeGreen;
+      case 'activeBlue':
+        return CupertinoColors.activeBlue;
       case 'systemGrey2':
         return CupertinoColors.systemGrey2;
+      case 'systemOrange':
+        return CupertinoColors.systemOrange;
+      case 'systemPink':
+        return CupertinoColors.systemPink;
       case 'systemRed':
         return CupertinoColors.systemRed;
+      case 'systemTeal':
+        return CupertinoColors.systemTeal;
+      case 'systemIndigo':
+        return CupertinoColors.systemIndigo;
       default:
-        return null;
+        return CupertinoColors.systemGrey; // fallback kalau nama tidak cocok
     }
   }
 
@@ -57,28 +70,50 @@ class _JadwalPageState extends State<JadwalPage> {
   }
 
   Future<void> fetchJadwal() async {
-    setState(() => isLoading = true);
+    setState(() {
+      isLoading = true;
+      jadwalKosong = false; // Reset dulu tiap fetch
+    });
+
     final bulan = selectedDate.month.toString().padLeft(2, '0');
     final tahun = selectedDate.year;
     final url = '${ApiService.baseUrl}/jadwal/${widget.id_user}/$bulan/$tahun';
+
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        setState(() {
-          jadwalData = Map<String, String>.from(data['jadwal']);
-          refShift = Map<String, String>.from(data['ref_shift']);
-          iconMap = Map<String, String>.from(data['icon']);
-          colorMap = Map<String, String>.from(data['color']);
-          flowData = Map<String, dynamic>.from(data['flow']);
-        });
+
+        // Cek isi jadwal
+        if (data['jadwal'] == null || (data['jadwal'] as Map).isEmpty) {
+          setState(() {
+            jadwalKosong = true;
+          });
+        } else {
+          setState(() {
+            jadwalData = Map<String, String>.from(data['jadwal']);
+            refShift = Map<String, String>.from(data['ref_shift']);
+            iconMap = Map<String, String>.from(data['icon']);
+            colorMap = Map<String, String>.from(data['color']);
+            flowData = Map<String, dynamic>.from(data['flow']);
+            jadwalKosong = false; // Ada data, bukan kosong
+          });
+        }
       } else {
         debugPrint('Gagal mengambil jadwal');
+        setState(() {
+          jadwalKosong = true;
+        });
       }
     } catch (e) {
       debugPrint('Error: $e');
+      setState(() {
+        jadwalKosong = true;
+      });
     } finally {
-      setState(() => isLoading = false);
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
@@ -188,6 +223,27 @@ class _JadwalPageState extends State<JadwalPage> {
     final half = (entries.length / 2).ceil();
     final leftItems = entries.sublist(0, half);
     final rightItems = entries.sublist(half);
+
+    if (jadwalKosong) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 40),
+            Icon(
+              CupertinoIcons.exclamationmark_circle,
+              size: 30,
+              color: CupertinoColors.systemGrey,
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              "Jadwal tidak ada",
+              style: TextStyle(fontSize: 16, color: CupertinoColors.systemGrey),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -382,14 +438,14 @@ class _JadwalPageState extends State<JadwalPage> {
                 final key = entry.key;
                 final value = entry.value;
 
-                if (key == 'staf' && value is List) {
+                if (key == 'Daftar Staf' && value is List) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          "Daftar Staf : ",
+                          "Daftar Staf (Diurutkan sesuai Abjad) : ",
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
@@ -446,53 +502,100 @@ class _JadwalPageState extends State<JadwalPage> {
 
   void _showMonthPicker() async {
     final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
-    DateTime tempDate = selectedDate;
+
+    int selectedMonth = selectedDate.month;
+    int selectedYear = selectedDate.year;
+
     await showCupertinoModalPopup(
       context: context,
       builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 0), // tambahkan padding bawah
-          child: Container(
-            height: 380,
-            color: isDark
-                ? CupertinoColors.black.withOpacity(0.8)
-                : CupertinoColors.systemBackground,
-            child: Column(
-              children: [
-                SizedBox(
-                  height: 300,
-                  child: CupertinoDatePicker(
-                    mode: CupertinoDatePickerMode.date,
-                    initialDateTime: selectedDate,
-                    maximumDate: DateTime.now().add(const Duration(days: 365)),
-                    onDateTimeChanged: (date) => tempDate = date,
+        child: Container(
+          height: 310,
+          color: isDark
+              ? CupertinoColors.black.withOpacity(0.8)
+              : CupertinoColors.systemBackground,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  'Pilihan Filter Bulan & Tahun',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    decoration: TextDecoration.none,
+                    color: isDark
+                        ? CupertinoColors.white
+                        : CupertinoColors.black,
                   ),
                 ),
-                CupertinoButton(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  color: isDark
-                      ? CupertinoColors.tertiaryLabel
-                      : CupertinoColors.systemGrey5,
-                  borderRadius: BorderRadius.circular(10),
-                  child: Text(
-                    "      Terapkan Tanggal      ",
-                    style: TextStyle(
-                      color: isDark
-                          ? CupertinoColors.white
-                          : CupertinoColors.black,
-                      fontSize: 15,
+              ),
+              SizedBox(
+                height: 200,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: CupertinoPicker(
+                        itemExtent: 40,
+                        scrollController: FixedExtentScrollController(
+                          initialItem: selectedMonth - 1,
+                        ),
+                        onSelectedItemChanged: (index) {
+                          selectedMonth = index + 1;
+                        },
+                        children: List.generate(
+                          12,
+                          (index) => Center(
+                            child: Text(
+                              "${index + 1}".padLeft(2, '0'),
+                              style: TextStyle(
+                                color: isDark
+                                    ? CupertinoColors.white
+                                    : CupertinoColors.black,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    setState(() {
-                      selectedDate = tempDate;
-                    });
-                    fetchJadwal();
-                  },
+                    Expanded(
+                      child: CupertinoPicker(
+                        itemExtent: 40,
+                        scrollController: FixedExtentScrollController(
+                          initialItem: DateTime.now().year - selectedYear,
+                        ),
+                        onSelectedItemChanged: (index) {
+                          selectedYear = DateTime.now().year - index;
+                        },
+                        children: List.generate(
+                          3, // 10 tahun ke belakang
+                          (index) => Center(
+                            child: Text(
+                              "${DateTime.now().year - index}",
+                              style: TextStyle(
+                                color: isDark
+                                    ? CupertinoColors.white
+                                    : CupertinoColors.black,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              CupertinoButton(
+                child: const Text("Terapkan"),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  setState(() {
+                    selectedDate = DateTime(selectedYear, selectedMonth);
+                  });
+                  fetchJadwal();
+                },
+              ),
+            ],
           ),
         ),
       ),
@@ -551,7 +654,9 @@ class _JadwalPageState extends State<JadwalPage> {
                       child: Center(child: CupertinoActivityIndicator()),
                     )
                   : Expanded(
-                      child: SingleChildScrollView(child: buildCalendar()),
+                      child: jadwalKosong
+                          ? buildCalendar()
+                          : SingleChildScrollView(child: buildCalendar()),
                     ),
             ],
           ),

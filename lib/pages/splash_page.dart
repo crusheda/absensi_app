@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'login_page.dart';
@@ -13,10 +14,12 @@ class SplashPage extends StatefulWidget {
 class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   double opacity = 0.0;
   double scale = 0.8;
+  String _appVersion = '';
 
   @override
   void initState() {
     super.initState();
+    _loadAppVersion();
 
     // Mulai animasi masuk
     Future.delayed(const Duration(milliseconds: 700), () {
@@ -28,6 +31,13 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
 
     // Jalankan semua future yang dibutuhkan saat splash
     startSplash();
+  }
+
+  void _loadAppVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    setState(() {
+      _appVersion = 'Versi ${info.version}';
+    });
   }
 
   /// Fungsi transisi animasi ke LoginPage
@@ -86,15 +96,43 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
               duration: const Duration(milliseconds: 800),
               child: Column(
                 children: [
-                  Text(
-                    'E-Absensi',
-                    style: TextStyle(
-                      fontSize: 33,
-                      color: isDark
-                          ? CupertinoColors.white
-                          : CupertinoColors.black,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'E-',
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          color:
+                              CupertinoTheme.brightnessOf(context) ==
+                                  Brightness.dark
+                              ? CupertinoColors.white
+                              : CupertinoColors.black,
+                          decoration: TextDecoration.none,
+                        ),
+                      ),
+                      ShaderMask(
+                        shaderCallback: (bounds) => LinearGradient(
+                          colors: [
+                            CupertinoColors.activeBlue,
+                            CupertinoColors.systemTeal,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ).createShader(bounds),
+                        child: Text(
+                          'Absensi',
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
+                            color: Colors
+                                .white, // HARUS white agar gradient terlihat
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -150,7 +188,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                     ),
                   ),
                   Text(
-                    'Version 3.1',
+                    _appVersion,
                     style: TextStyle(
                       fontSize: 12,
                       color: isDark

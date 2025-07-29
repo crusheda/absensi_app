@@ -246,7 +246,16 @@ class _RekapPageState extends State<RekapPage> {
           showCupertinoModalPopup(
             context: context,
             builder: (BuildContext context) => CupertinoActionSheet(
-              title: Text('Pilih Rentang Waktu'),
+              title: DefaultTextStyle.merge(
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: isDark
+                      ? CupertinoColors.white
+                      : CupertinoColors.darkBackgroundGray,
+                ),
+                child: Text('Pilih Rentang Waktu', textAlign: TextAlign.center),
+              ),
               actions: [
                 ...filterOptions.entries.map((entry) {
                   return CupertinoActionSheetAction(
