@@ -66,11 +66,16 @@ class _DashboardPageState extends State<DashboardPage> {
     super.initState();
     _loadDashboard();
     _updateTime();
+    _initFcmToken();
     _timer = Timer.periodic(
       const Duration(seconds: 1),
       (timer) => _updateTime(),
     );
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
+  }
+
+  void _initFcmToken() async {
+    await ApiService.sendFcmTokenToServer();
   }
 
   Future<void> _loadDashboard() async {

@@ -48,6 +48,7 @@ class _LoginPageState extends State<LoginPage> {
       await prefs.setString('name', result['nama']);
       await prefs.setString('nama', result['nama']);
       await prefs.setString('foto_profil', result['foto_profil'] ?? '');
+      await ApiService.sendFcmTokenToServer();
 
       Navigator.pushReplacement(
         context,

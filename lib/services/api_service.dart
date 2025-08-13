@@ -5,6 +5,8 @@ import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as path;
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
 class ApiService {
   // Ganti sesuai URL API Laravel kamu
@@ -22,6 +24,51 @@ class ApiService {
     } else {
       throw Exception('Gagal mengambil lokasi kantor');
     }
+  }
+
+  static Future<void> sendFcmTokenToServer() async {
+    final prefs = await SharedPreferences.getInstance();
+    final idUser = prefs.getInt('id_user');
+    final authToken = prefs.getString('token');
+
+    if (idUser == null || authToken == null) return;
+
+    final fcmToken = await FirebaseMessaging.instance.getToken();
+    final deviceInfo = await DeviceInfoPlugin().androidInfo; // Untuk Android
+    if (fcmToken == null) return;
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/save-fcm-token'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'user_id': idUser,
+        'token': fcmToken,
+        'platform': 'android',
+        'os_version': deviceInfo.version.release,
+        'model': deviceInfo.model,
+        'is_rooted': '0',
+      }),
+    );
+
+    print("Respon kirim token: ${response.statusCode} - ${response.body}");
+  }
+
+  static Future<bool> broadcastMessage(
+    String token,
+    String title,
+    String body,
+  ) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/broadcast"),
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({'title': title, 'body': body}),
+    );
+    print('Response status: ${response.statusCode}');
+    print('Response body: ${response.body}');
+    return response.statusCode == 200;
   }
 
   static Future<Map<String, dynamic>> cekValidasiTombol({
@@ -185,9 +232,17 @@ class ApiService {
 
     if (token == null) return false;
 
-    final uri = Uri.parse('$baseUrl/logout');
-
     try {
+      // 1️⃣ Hapus FCM token di backend
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      if (fcmToken != null) {
+        final removeTokenUri = Uri.parse('$baseUrl/remove-token');
+        await http.post(removeTokenUri, body: {'token': fcmToken});
+        print("FCM token dikirim untuk dihapus: $fcmToken");
+      }
+
+      // 2️⃣ Request logout ke backend
+      final uri = Uri.parse('$baseUrl/logout');
       final response = await http.post(
         uri,
         headers: {
@@ -195,21 +250,19 @@ class ApiService {
           'Authorization': 'Bearer $token',
         },
       );
+
       print("Status: ${response.statusCode}");
       print("Body: ${response.body}");
 
-      if (response.statusCode == 200) {
-        // Sukses logout
-        await prefs.remove('token');
-        return true;
-      } else if (response.statusCode == 401) {
-        // Token sudah expired/invalid → tetap hapus token lokal
+      // 3️⃣ Hapus token lokal sesuai status
+      if (response.statusCode == 200 || response.statusCode == 401) {
         await prefs.remove('token');
         return true;
       } else {
         return false;
       }
     } catch (e) {
+      print("Error logout: $e");
       return false;
     }
   }

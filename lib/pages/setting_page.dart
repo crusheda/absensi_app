@@ -5,7 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:provider/provider.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme_provider.dart';
 import '../services/api_service.dart';
 import 'login_page.dart';
@@ -154,6 +154,7 @@ class _SettingPageState extends State<SettingPage> {
 
     if (confirm != true) return;
 
+    // ✅ Panggil logout dari ApiService (sudah termasuk hapus FCM token)
     final success = await ApiService.logout();
 
     if (context.mounted) {
@@ -183,6 +184,82 @@ class _SettingPageState extends State<SettingPage> {
     );
   }
 
+  void _showPushNotificationDialog(BuildContext context) {
+    final TextEditingController titleController = TextEditingController();
+    final TextEditingController messageController = TextEditingController();
+
+    showCupertinoDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return CupertinoAlertDialog(
+          title: const Text("Push Notifikasi"),
+          content: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Column(
+                children: [
+                  const SizedBox(height: 10),
+                  CupertinoTextField(
+                    controller: titleController,
+                    placeholder: "Judul notifikasi",
+                    maxLines: 1,
+                  ),
+                  const SizedBox(height: 10),
+                  CupertinoTextField(
+                    controller: messageController,
+                    placeholder: "Tulis pesan notifikasi...",
+                    maxLines: 3,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            CupertinoDialogAction(
+              child: const Text("Batal"),
+              onPressed: () => Navigator.pop(context),
+            ),
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              child: const Text("Kirim"),
+              onPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                final token = prefs.getString('token');
+                print('Token: $token'); // pastikan tidak null
+
+                if (token == null) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Kamu harus login dulu")),
+                  );
+                  return;
+                }
+
+                bool success = await ApiService.broadcastMessage(
+                  token,
+                  titleController.text.trim(), // title
+                  messageController.text.trim(), // body
+                );
+
+                Navigator.pop(context);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      success
+                          ? "Pesan notifikasi berhasil dikirim"
+                          : "Gagal mengirim notifikasi",
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isFotoAda = widget.fotoProfil.trim().isNotEmpty;
@@ -193,7 +270,6 @@ class _SettingPageState extends State<SettingPage> {
     final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
 
     return Scaffold(
-      // navigationBar: const CupertinoNavigationBar(middle: Text('Pengaturan')),
       body: Stack(
         children: [
           // 🎨 BACKGROUND GRADIENT + BLUR
@@ -242,161 +318,169 @@ class _SettingPageState extends State<SettingPage> {
           Positioned.fill(
             top: kToolbarHeight, // biar tidak ketimpa navbar
             child: SafeArea(
-              child: Column(
-                children: [
-                  const SizedBox(height: 10),
-                  CircleAvatar(
-                    radius: 42,
-                    backgroundColor: CupertinoColors.systemGrey4,
-                    backgroundImage: isFotoAda
-                        ? NetworkImage(fotoUrl!)
-                        : const AssetImage('assets/user.png') as ImageProvider,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    widget.nama,
-                    style: const TextStyle(
-                      // fontSize: 20,
-                      fontWeight: FontWeight.w600,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 10),
+                    CircleAvatar(
+                      radius: 42,
+                      backgroundColor: CupertinoColors.systemGrey4,
+                      backgroundImage: isFotoAda
+                          ? NetworkImage(fotoUrl!)
+                          : const AssetImage('assets/user.png')
+                                as ImageProvider,
                     ),
-                  ),
-                  Text(
-                    'NIP: ${widget.nip}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: CupertinoColors.systemGrey,
+                    const SizedBox(height: 10),
+                    Text(
+                      widget.nama,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                  ),
-                  const SizedBox(height: 30),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        const Divider(height: 1),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
-                          ),
-                          child: Column(
-                            children: [
-                              _buildSwitchRow(
-                                'Mode Gelap',
-                                Consumer<ThemeProvider>(
-                                  builder: (context, themeProvider, _) {
-                                    return CupertinoSwitch(
-                                      value: themeProvider.isDarkMode,
-                                      onChanged: (isOn) {
-                                        themeProvider.toggleTheme(isOn);
-                                      },
-                                    );
+                    Text(
+                      'NIP: ${widget.nip}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: CupertinoColors.systemGrey,
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    const Divider(height: 1),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      child: Column(
+                        children: [
+                          _buildSwitchRow(
+                            'Mode Gelap',
+                            Consumer<ThemeProvider>(
+                              builder: (context, themeProvider, _) {
+                                return CupertinoSwitch(
+                                  value: themeProvider.isDarkMode,
+                                  onChanged: (isOn) {
+                                    themeProvider.toggleTheme(isOn);
                                   },
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              _buildSwitchRow(
-                                'Izin Notifikasi',
-                                CupertinoSwitch(
-                                  value: notifAllowed,
-                                  onChanged: notifAllowed
-                                      ? null
-                                      : (value) async {
-                                          final status = await Permission
-                                              .notification
-                                              .request();
-                                          setState(() {
-                                            notifAllowed = status.isGranted;
-                                          });
-                                        },
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              _buildSwitchRow(
-                                'Izin GPS',
-                                CupertinoSwitch(
-                                  value: gpsAllowed,
-                                  onChanged: gpsAllowed
-                                      ? null
-                                      : (value) async {
-                                          final status = await Permission
-                                              .location
-                                              .request();
-                                          setState(() {
-                                            gpsAllowed = status.isGranted;
-                                          });
-                                        },
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              _buildSwitchRow(
-                                'Izin Kamera',
-                                CupertinoSwitch(
-                                  value: cameraAllowed,
-                                  onChanged: cameraAllowed
-                                      ? null
-                                      : (value) async {
-                                          final status = await Permission.camera
-                                              .request();
-                                          setState(() {
-                                            cameraAllowed = status.isGranted;
-                                          });
-                                        },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Divider(height: 1),
-                        CupertinoListTile(
-                          leading: const Icon(CupertinoIcons.bell),
-                          title: Text(
-                            'Tes Notifikasi E-Absensi',
-                            style: TextStyle(
-                              color: isDark
-                                  ? CupertinoColors.white
-                                  : CupertinoColors.black,
+                                );
+                              },
                             ),
                           ),
-                          onTap: _showDummyNotification,
-                        ),
-                        const Divider(height: 1),
-                        CupertinoListTile(
-                          leading: const Icon(CupertinoIcons.info),
-                          title: Text(
-                            'Tentang Aplikasi',
-                            style: TextStyle(
-                              color: isDark
-                                  ? CupertinoColors.white
-                                  : CupertinoColors.black,
+                          const SizedBox(height: 8),
+                          _buildSwitchRow(
+                            'Izin Notifikasi',
+                            CupertinoSwitch(
+                              value: notifAllowed,
+                              onChanged: notifAllowed
+                                  ? null
+                                  : (value) async {
+                                      final status = await Permission
+                                          .notification
+                                          .request();
+                                      setState(() {
+                                        notifAllowed = status.isGranted;
+                                      });
+                                    },
                             ),
                           ),
-                          onTap: _showTentangAplikasi,
-                        ),
-                        const Divider(height: 1),
-                        CupertinoListTile(
-                          leading: const Icon(
-                            CupertinoIcons.square_arrow_right,
-                            color: CupertinoColors.systemRed,
+                          const SizedBox(height: 8),
+                          _buildSwitchRow(
+                            'Izin GPS',
+                            CupertinoSwitch(
+                              value: gpsAllowed,
+                              onChanged: gpsAllowed
+                                  ? null
+                                  : (value) async {
+                                      final status = await Permission.location
+                                          .request();
+                                      setState(() {
+                                        gpsAllowed = status.isGranted;
+                                      });
+                                    },
+                            ),
                           ),
-                          title: const Text(
-                            'Logout',
-                            style: TextStyle(color: CupertinoColors.systemRed),
+                          const SizedBox(height: 8),
+                          _buildSwitchRow(
+                            'Izin Kamera',
+                            CupertinoSwitch(
+                              value: cameraAllowed,
+                              onChanged: cameraAllowed
+                                  ? null
+                                  : (value) async {
+                                      final status = await Permission.camera
+                                          .request();
+                                      setState(() {
+                                        cameraAllowed = status.isGranted;
+                                      });
+                                    },
+                            ),
                           ),
-                          onTap: _logout,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Text(
+                    const Divider(height: 1),
+                    CupertinoListTile(
+                      leading: const Icon(CupertinoIcons.bell),
+                      title: Text(
+                        'Tes Notifikasi E-Absensi',
+                        style: TextStyle(
+                          color: isDark
+                              ? CupertinoColors.white
+                              : CupertinoColors.black,
+                        ),
+                      ),
+                      onTap: _showDummyNotification,
+                    ),
+                    const Divider(height: 1),
+                    CupertinoListTile(
+                      leading: const Icon(CupertinoIcons.info),
+                      title: Text(
+                        'Tentang Aplikasi',
+                        style: TextStyle(
+                          color: isDark
+                              ? CupertinoColors.white
+                              : CupertinoColors.black,
+                        ),
+                      ),
+                      onTap: _showTentangAplikasi,
+                    ),
+                    const Divider(height: 1),
+                    if (widget.id_user == 232) ...[
+                      CupertinoListTile(
+                        leading: const Icon(CupertinoIcons.paperplane),
+                        title: Text(
+                          'Push Notifikasi',
+                          style: TextStyle(
+                            color: isDark
+                                ? CupertinoColors.white
+                                : CupertinoColors.black,
+                          ),
+                        ),
+                        onTap: () => _showPushNotificationDialog(context),
+                      ),
+                      const Divider(height: 1),
+                    ],
+                    CupertinoListTile(
+                      leading: const Icon(
+                        CupertinoIcons.square_arrow_right,
+                        color: CupertinoColors.systemRed,
+                      ),
+                      title: const Text(
+                        'Logout',
+                        style: TextStyle(color: CupertinoColors.systemRed),
+                      ),
+                      onTap: _logout,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
                       appVersion,
                       style: const TextStyle(
                         fontSize: 12,
                         color: CupertinoColors.systemGrey,
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

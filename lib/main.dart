@@ -9,14 +9,116 @@ import 'theme_provider.dart';
 import 'pages/login_page.dart';
 import 'pages/main_page.dart';
 import 'pages/splash_page.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 // ✅ Tambah variable global
 late List<CameraDescription> cameras;
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+// 🔹 Background handler
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  // Jangan tampilkan notifikasi manual di background
+  print("Pesan diterima di background: ${message.data['title'] ?? 'No Title'}");
+}
+
+// 🔹 Inisialisasi notifikasi
+Future<void> _initNotifications() async {
+  const AndroidInitializationSettings androidInit =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+  const DarwinInitializationSettings iosInit = DarwinInitializationSettings();
+  const InitializationSettings initSettings = InitializationSettings(
+    android: androidInit,
+    iOS: iosInit,
+  );
+
+  await flutterLocalNotificationsPlugin.initialize(initSettings);
+
+  // Buat channel Android
+  const AndroidNotificationChannel channel = AndroidNotificationChannel(
+    'eabsensi_channel',
+    'E-Absensi Notifications',
+    description: 'Notifikasi penting E-Absensi',
+    importance: Importance.max,
+  );
+
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin
+      >()
+      ?.createNotificationChannel(channel);
+
+  // Request permission (iOS)
+  await FirebaseMessaging.instance.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+}
+
+// 🔹 Tampilkan notifikasi foreground saja
+Future<void> _showForegroundNotification(RemoteMessage message) async {
+  final data = message.data;
+  final String? title = data['title'];
+  final String? body = data['body'];
+
+  if (title != null && body != null) {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+          'eabsensi_channel',
+          'E-Absensi Notifications',
+          channelDescription: 'Notifikasi penting E-Absensi',
+          importance: Importance.max,
+          priority: Priority.high,
+        );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails();
+
+    const NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await flutterLocalNotificationsPlugin.show(
+      data.hashCode, // unik per pesan
+      title,
+      body,
+      platformDetails,
+    );
+  }
+}
 
 void main() async {
   Intl.defaultLocale = 'id_ID';
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id', null);
+  await Firebase.initializeApp();
+
+  await _initNotifications();
+
+  // 🔹 Listener untuk foreground
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    print("🔔 Foreground message: ${message.data['title'] ?? 'No Title'}");
+
+    // Hanya tampilkan local notification jika app sedang foreground
+    if (message.data.containsKey('title') && message.data.containsKey('body')) {
+      _showForegroundNotification(message);
+    }
+  });
+
+  // 🔹 Listener untuk saat user tap notifikasi dari background / terminated
+  FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    print(
+      "📬 Dibuka dari background / terminated: ${message.data['title'] ?? 'No Title'}",
+    );
+    // Navigasi halaman tertentu bisa dilakukan di sini
+  });
+
+  // 🔹 Background message handler
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   // ✅ Inisialisasi kamera di awal
   cameras = await availableCameras();
