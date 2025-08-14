@@ -81,6 +81,11 @@ class _SettingPageState extends State<SettingPage> {
 
   void _showDummyNotification() async {
     final status = await Permission.notification.request();
+
+    setState(() {
+      notifAllowed = status.isGranted; // <-- update switch langsung
+    });
+
     if (!status.isGranted) return;
 
     const AndroidNotificationDetails androidDetails =
@@ -98,8 +103,8 @@ class _SettingPageState extends State<SettingPage> {
 
     await flutterLocalNotificationsPlugin.show(
       0,
-      'Tes Notifikasi E-Absensi',
-      'Ini contoh notifikasi dari E-Absensi. Semangat!',
+      'Tes Notifikasi Informasi E-Absensi',
+      'Ini adalah contoh notifikasi dari Aplikasi E-Absensi. Jangan lupa absensi ya :)',
       notificationDetails,
     );
   }
@@ -132,6 +137,7 @@ class _SettingPageState extends State<SettingPage> {
   }
 
   Future<void> _logout() async {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     final confirm = await showCupertinoDialog<bool>(
       context: context,
       builder: (_) => CupertinoAlertDialog(
@@ -187,6 +193,7 @@ class _SettingPageState extends State<SettingPage> {
   void _showPushNotificationDialog(BuildContext context) {
     final TextEditingController titleController = TextEditingController();
     final TextEditingController messageController = TextEditingController();
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
 
     showCupertinoDialog(
       context: context,
@@ -202,12 +209,36 @@ class _SettingPageState extends State<SettingPage> {
                   CupertinoTextField(
                     controller: titleController,
                     placeholder: "Judul notifikasi",
+                    placeholderStyle: TextStyle(
+                      fontSize: 14,
+                      color: isDark
+                          ? CupertinoColors.systemGrey
+                          : CupertinoColors.systemGrey2,
+                    ),
+                    style: TextStyle(
+                      color: isDark
+                          ? CupertinoColors.white
+                          : CupertinoColors.black,
+                      fontSize: 14,
+                    ),
                     maxLines: 1,
                   ),
                   const SizedBox(height: 10),
                   CupertinoTextField(
                     controller: messageController,
                     placeholder: "Tulis pesan notifikasi...",
+                    placeholderStyle: TextStyle(
+                      fontSize: 14,
+                      color: isDark
+                          ? CupertinoColors.systemGrey
+                          : CupertinoColors.systemGrey2,
+                    ),
+                    style: TextStyle(
+                      color: isDark
+                          ? CupertinoColors.white
+                          : CupertinoColors.black,
+                      fontSize: 14,
+                    ),
                     maxLines: 3,
                   ),
                 ],
@@ -432,19 +463,6 @@ class _SettingPageState extends State<SettingPage> {
                       onTap: _showDummyNotification,
                     ),
                     const Divider(height: 1),
-                    CupertinoListTile(
-                      leading: const Icon(CupertinoIcons.info),
-                      title: Text(
-                        'Tentang Aplikasi',
-                        style: TextStyle(
-                          color: isDark
-                              ? CupertinoColors.white
-                              : CupertinoColors.black,
-                        ),
-                      ),
-                      onTap: _showTentangAplikasi,
-                    ),
-                    const Divider(height: 1),
                     if (widget.id_user == 232) ...[
                       CupertinoListTile(
                         leading: const Icon(CupertinoIcons.paperplane),
@@ -460,6 +478,19 @@ class _SettingPageState extends State<SettingPage> {
                       ),
                       const Divider(height: 1),
                     ],
+                    CupertinoListTile(
+                      leading: const Icon(CupertinoIcons.info),
+                      title: Text(
+                        'Tentang Aplikasi',
+                        style: TextStyle(
+                          color: isDark
+                              ? CupertinoColors.white
+                              : CupertinoColors.black,
+                        ),
+                      ),
+                      onTap: _showTentangAplikasi,
+                    ),
+                    const Divider(height: 1),
                     CupertinoListTile(
                       leading: const Icon(
                         CupertinoIcons.square_arrow_right,

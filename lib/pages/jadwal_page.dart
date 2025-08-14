@@ -1,8 +1,9 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show Icons, Colors;
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:ui';
 import '../services/api_service.dart';
 
 class JadwalPage extends StatefulWidget {
@@ -605,62 +606,145 @@ class _JadwalPageState extends State<JadwalPage> {
   @override
   Widget build(BuildContext context) {
     final formatter = DateFormat('MMMM yyyy', 'id');
-    return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(
-        middle: Text(
-          'Jadwal Saya',
-          style: TextStyle(
-            color: CupertinoTheme.brightnessOf(context) == Brightness.dark
-                ? CupertinoColors.systemGrey2
-                : CupertinoColors.black,
-          ),
-        ),
-        backgroundColor: CupertinoTheme.brightnessOf(context) == Brightness.dark
-            ? CupertinoColors.transparent
-            : CupertinoColors.systemGrey4.withOpacity(0.1),
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: CupertinoButton(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      color: CupertinoColors.systemGrey5,
-                      borderRadius: BorderRadius.circular(12),
-                      onPressed: _showMonthPicker,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(formatter.format(selectedDate)),
-                          const SizedBox(width: 6),
-                          const Icon(CupertinoIcons.calendar),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+
+    return Scaffold(
+      body: Stack(
+        children: [
+          // 🎨 BACKGROUND GRADIENT + BLUR
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isDark
+                      ? [Colors.black, Colors.grey.shade900]
+                      : [Colors.blue.shade50, Colors.white],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
               ),
-              const SizedBox(height: 12),
-              isLoading
-                  ? const Expanded(
-                      child: Center(child: CupertinoActivityIndicator()),
-                    )
-                  : Expanded(
-                      child: jadwalKosong
-                          ? buildCalendar()
-                          : SingleChildScrollView(child: buildCalendar()),
-                    ),
-            ],
+            ),
           ),
-        ),
+          Positioned(
+            top: -50,
+            left: -50,
+            child: _blurCircle(Colors.blueAccent.withOpacity(0.2)),
+          ),
+          Positioned(
+            bottom: -60,
+            right: -40,
+            child: _blurCircle(Colors.purpleAccent.withOpacity(0.2)),
+          ),
+
+          // ✅ NAVBAR
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: CupertinoNavigationBar(
+              middle: Text(
+                'Jadwal Saya',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: isDark
+                      ? CupertinoColors.systemGrey2
+                      : CupertinoColors.black,
+                ),
+              ),
+              backgroundColor: Colors.transparent,
+              border: null,
+            ),
+          ),
+
+          // ✅ CONTENT
+          Positioned.fill(
+            top:
+                18 +
+                MediaQuery.of(
+                  context,
+                ).padding.top, // tinggi navbar = kToolbarHeight
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CupertinoButton(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            color: isDark
+                                ? CupertinoColors.tertiaryLabel
+                                : CupertinoColors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            onPressed: _showMonthPicker,
+                            child: Row(
+                              children: [
+                                Text(
+                                  "Ubah Bulan :",
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? CupertinoColors.white
+                                        : CupertinoColors.black,
+                                  ),
+                                ),
+                                const Spacer(), // mendorong teks tanggal ke kanan
+                                Text(
+                                  formatter.format(selectedDate),
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? CupertinoColors.white
+                                        : CupertinoColors.black,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Icon(
+                                  CupertinoIcons.calendar,
+                                  color: isDark
+                                      ? CupertinoColors.white
+                                      : CupertinoColors.black,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    isLoading
+                        ? const Expanded(
+                            child: Center(child: CupertinoActivityIndicator()),
+                          )
+                        : Expanded(
+                            child: jadwalKosong
+                                ? buildCalendar()
+                                : SingleChildScrollView(child: buildCalendar()),
+                          ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 🔹 Helper untuk membuat blur circle
+  Widget _blurCircle(Color color) {
+    return Container(
+      width: 200,
+      height: 200,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+        child: Container(color: Colors.transparent),
       ),
     );
   }

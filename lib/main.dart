@@ -97,7 +97,7 @@ void main() async {
   await initializeDateFormatting('id', null);
   await Firebase.initializeApp();
 
-  await _initNotifications();
+  // await _initNotifications();
 
   // 🔹 Listener untuk foreground
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {

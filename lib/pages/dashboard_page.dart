@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:ui';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -246,7 +247,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Saat berhasil memuat dashboard
     final bool isFotoAda = widget.fotoProfil?.trim().isNotEmpty ?? false;
     final fotoUrl = isFotoAda
         ? '${ApiService.simrsUrl}/storage/${widget.fotoProfil.replaceFirst('public/', '')}'
@@ -255,26 +255,43 @@ class _DashboardPageState extends State<DashboardPage> {
     final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
 
     return CupertinoPageScaffold(
-      child: SafeArea(
-        child: Stack(
-          children: [
-            ListView(
+      child: Stack(
+        children: [
+          // 🎨 BACKGROUND GRADIENT + BLUR
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isDark
+                      ? [Colors.black, Colors.grey.shade900]
+                      : [Colors.blue.shade50, Colors.white],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: -50,
+            left: -50,
+            child: _blurCircle(Colors.blueAccent.withOpacity(0.2)),
+          ),
+          Positioned(
+            bottom: -60,
+            right: -40,
+            child: _blurCircle(Colors.purpleAccent.withOpacity(0.2)),
+          ),
+
+          // ✅ Konten utama dashboard
+          SafeArea(
+            child: ListView(
               physics: const ClampingScrollPhysics(),
               padding: const EdgeInsets.all(16),
               children: [
                 Row(
                   children: [
                     Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        // boxShadow: const [
-                        //   BoxShadow(
-                        //     color: CupertinoColors.systemGrey4,
-                        //     blurRadius: 6,
-                        //     offset: Offset(0, 3),
-                        //   ),
-                        // ],
-                      ),
+                      decoration: BoxDecoration(shape: BoxShape.circle),
                       child: CircleAvatar(
                         radius: 24,
                         backgroundColor: CupertinoColors.systemGrey4,
@@ -296,10 +313,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           fit: BoxFit.scaleDown,
                           child: Text(
                             '${widget.name} 👋',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              // fontSize: 12,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
@@ -309,6 +323,8 @@ class _DashboardPageState extends State<DashboardPage> {
                   ],
                 ),
                 const SizedBox(height: 20),
+
+                // Loader / Memuat Dashboard
                 if (isRetrying)
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -324,8 +340,6 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                     child: Row(
                       children: [
-                        // const CupertinoActivityIndicator(radius: 10),
-                        // const SizedBox(width: 8),
                         Text(
                           "Memuat Dashboard...",
                           style: TextStyle(
@@ -337,17 +351,11 @@ class _DashboardPageState extends State<DashboardPage> {
                         ),
                         const Spacer(),
                         const CupertinoActivityIndicator(radius: 10),
-                        // Text(
-                        //   "$loadingProgress%",
-                        //   style: const TextStyle(
-                        //     fontSize: 13,
-                        //     fontWeight: FontWeight.bold,
-                        //     color: CupertinoColors.black,
-                        //   ),
-                        // ),
                       ],
                     ),
                   ),
+
+                // Cover Jadwal Hari Ini
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16),
                   child: Stack(
@@ -379,7 +387,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             ),
                             Text(
                               dashboard?.statuspgw?.namaStatus ?? '-',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
@@ -432,7 +440,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
+                          const Text(
                             "Jadwal Hari Ini",
                             style: TextStyle(
                               color: Colors.white,
@@ -440,7 +448,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          SizedBox(height: 1),
+                          const SizedBox(height: 1),
                           AnimatedSwitcher(
                             duration: const Duration(milliseconds: 300),
                             transitionBuilder:
@@ -450,8 +458,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                     child: child,
                                   );
                                 },
-                            child:
-                                _buildNamaShift(), // Ini akan berganti dengan animasi saat berubah
+                            child: _buildNamaShift(),
                           ),
                           const SizedBox(height: 3),
                           AnimatedSwitcher(
@@ -463,8 +470,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                     child: child,
                                   );
                                 },
-                            child:
-                                _buildShift(), // Ini akan berganti dengan animasi saat berubah
+                            child: _buildShift(),
                           ),
                         ],
                       ),
@@ -496,12 +502,14 @@ class _DashboardPageState extends State<DashboardPage> {
                     ],
                   ),
                 ),
+
                 const SizedBox(height: 20),
                 Text(
                   "\u{1F501} Perhitungan Absensi Bulan Ini",
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 20),
+
                 Row(
                   children: [
                     _buildSquareStat(
@@ -517,8 +525,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                 color: CupertinoColors.activeBlue,
                               ),
                             ),
-                      CupertinoColors
-                          .activeBlue, // kalau kamu perlu param color lain
+                      CupertinoColors.activeBlue,
                     ),
                     _buildSquareStat(
                       context,
@@ -567,7 +574,10 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 20),
+
+                // Jadwal Admin
                 dashboard?.jadwal != null
                     ? Container(
                         padding: const EdgeInsets.all(14),
@@ -606,11 +616,11 @@ class _DashboardPageState extends State<DashboardPage> {
                                 children: [
                                   Text(
                                     "Jadwal ${bulanToNama(dashboard?.jadwal?.bulan)} ${dashboard?.jadwal?.tahun}",
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  SizedBox(height: 2),
+                                  const SizedBox(height: 2),
                                   Text(
                                     "Diperbarui oleh:",
                                     style: TextStyle(
@@ -618,7 +628,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                       color: CupertinoColors.systemGrey,
                                     ),
                                   ),
-                                  SizedBox(height: 1),
+                                  const SizedBox(height: 1),
                                   Text(
                                     "${dashboard?.jadwal?.namaPegawai} (Admin Jadwal)",
                                     style: TextStyle(
@@ -626,12 +636,12 @@ class _DashboardPageState extends State<DashboardPage> {
                                       color: CupertinoColors.systemGrey,
                                     ),
                                   ),
-                                  SizedBox(height: 1),
+                                  const SizedBox(height: 1),
                                   Text(
                                     formatTanggalIndonesia(
                                       dashboard?.jadwal?.updatedAt,
                                     ),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 11,
                                       color: CupertinoColors.systemGrey,
                                     ),
@@ -651,7 +661,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                 "LIHAT",
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Color.fromARGB(255, 255, 255, 255),
+                                  color: Colors.white,
                                 ),
                               ),
                             ),
@@ -659,9 +669,8 @@ class _DashboardPageState extends State<DashboardPage> {
                         ),
                       )
                     : const SizedBox.shrink(),
-                dashboard?.jadwal != null
-                    ? const SizedBox(height: 20)
-                    : const SizedBox(height: 0),
+
+                const SizedBox(height: 20),
                 _buildActionTile(
                   "Riwayat Absensi",
                   CupertinoIcons.clock,
@@ -674,8 +683,21 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Fungsi _blurCircle
+  Widget _blurCircle(Color color) {
+    return Container(
+      width: 200,
+      height: 200,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+        child: Container(color: Colors.transparent),
       ),
     );
   }

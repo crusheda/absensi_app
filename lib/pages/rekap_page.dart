@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import '../services/api_service.dart';
 import 'rekap_detail_page.dart';
+import 'dart:ui';
+import 'package:flutter/material.dart';
 
 class DataModel {
   final String label;
@@ -326,24 +328,60 @@ class _RekapPageState extends State<RekapPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
-    return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(
-        middle: Text(
-          'Rekapitulasi Absensi',
-          style: TextStyle(
-            color: CupertinoTheme.brightnessOf(context) == Brightness.dark
-                ? CupertinoColors.systemGrey2
-                : CupertinoColors.black,
+
+    return Scaffold(
+      body: Stack(
+        children: [
+          // 🎨 BACKGROUND GRADIENT + BLUR
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isDark
+                      ? [Colors.black, Colors.grey.shade900]
+                      : [Colors.blue.shade50, Colors.white],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
           ),
-        ),
-        backgroundColor: CupertinoTheme.brightnessOf(context) == Brightness.dark
-            ? CupertinoColors.transparent
-            : CupertinoColors.systemGrey4.withOpacity(0),
-      ),
-      child: SafeArea(
-        child: Stack(
-          children: [
-            Column(
+          Positioned(
+            top: -50,
+            left: -50,
+            child: _blurCircle(Colors.blueAccent.withOpacity(0.2)),
+          ),
+          Positioned(
+            bottom: -60,
+            right: -40,
+            child: _blurCircle(Colors.purpleAccent.withOpacity(0.2)),
+          ),
+
+          // ✅ NAVBAR
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: CupertinoNavigationBar(
+              middle: Text(
+                'Rekapitulasi Absensi',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: isDark
+                      ? CupertinoColors.systemGrey2
+                      : CupertinoColors.black,
+                ),
+              ),
+              backgroundColor: Colors.transparent,
+              border: null,
+            ),
+          ),
+
+          // ✅ CONTENT
+          Positioned.fill(
+            top: 44 + MediaQuery.of(context).padding.top, // tinggi navbar
+            child: Column(
               children: [
                 const SizedBox(height: 12),
                 Padding(
@@ -366,7 +404,6 @@ class _RekapPageState extends State<RekapPage> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 12),
                 _buildFilterPicker(context),
                 const SizedBox(height: 12),
@@ -399,7 +436,6 @@ class _RekapPageState extends State<RekapPage> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 12),
 
                 // ✅ List atau Loading
@@ -471,7 +507,7 @@ class _RekapPageState extends State<RekapPage> {
                                               ? CupertinoColors.black
                                               : CupertinoColors.systemGrey4,
                                           blurRadius: 6,
-                                          offset: Offset(0, 3),
+                                          offset: const Offset(0, 3),
                                         ),
                                       ],
                                     ),
@@ -503,7 +539,7 @@ class _RekapPageState extends State<RekapPage> {
                                                         : CupertinoColors
                                                               .systemGrey,
                                                     blurRadius: 10,
-                                                    offset: Offset(0, 3),
+                                                    offset: const Offset(0, 3),
                                                   ),
                                                 ],
                                               ),
@@ -578,31 +614,44 @@ class _RekapPageState extends State<RekapPage> {
                 ),
               ],
             ),
+          ),
 
-            // ✅ Tombol ke atas jika scroll panjang
-            if (showBackToTopButton)
-              Positioned(
-                bottom: 24,
-                right: 24,
-                child: CupertinoButton(
-                  padding: const EdgeInsets.all(10),
-                  color: CupertinoColors.systemGrey,
-                  borderRadius: BorderRadius.circular(30),
-                  child: const Icon(
-                    CupertinoIcons.arrow_up,
-                    color: CupertinoColors.white,
-                  ),
-                  onPressed: () {
-                    _scrollController.animateTo(
-                      0,
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeOut,
-                    );
-                  },
+          // ✅ Tombol ke atas jika scroll panjang
+          if (showBackToTopButton)
+            Positioned(
+              bottom: 24,
+              right: 24,
+              child: CupertinoButton(
+                padding: const EdgeInsets.all(10),
+                color: CupertinoColors.systemGrey,
+                borderRadius: BorderRadius.circular(30),
+                child: const Icon(
+                  CupertinoIcons.arrow_up,
+                  color: CupertinoColors.white,
                 ),
+                onPressed: () {
+                  _scrollController.animateTo(
+                    0,
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeOut,
+                  );
+                },
               ),
-          ],
-        ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // 🔹 Helper untuk membuat blur circle
+  Widget _blurCircle(Color color) {
+    return Container(
+      width: 200,
+      height: 200,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+        child: Container(color: Colors.transparent),
       ),
     );
   }
