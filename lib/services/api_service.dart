@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:dart_ipify/dart_ipify.dart';
 
 class ApiService {
   // Ganti sesuai URL API Laravel kamu
@@ -23,6 +24,15 @@ class ApiService {
       return LatLng(data['latitude'], data['longitude']);
     } else {
       throw Exception('Gagal mengambil lokasi kantor');
+    }
+  }
+
+  static Future<String> getUserIp() async {
+    try {
+      final ipv4 = await Ipify.ipv4();
+      return ipv4;
+    } catch (e) {
+      return "unknown";
     }
   }
 
@@ -43,6 +53,7 @@ class ApiService {
       body: jsonEncode({
         'user_id': idUser,
         'token': fcmToken,
+        'device_id': deviceInfo.id,
         'platform': 'android',
         'os_version': deviceInfo.version.release,
         'model': deviceInfo.model,
@@ -64,7 +75,12 @@ class ApiService {
         "Accept": "application/json",
         "Content-Type": "application/json",
       },
-      body: jsonEncode({'title': title, 'body': body}),
+      body: jsonEncode({
+        'title': title,
+        'body': body,
+        'notification': {'title': title, 'body': body},
+        'data': {'type': 'broadcast'},
+      }),
     );
     print('Response status: ${response.statusCode}');
     print('Response body: ${response.body}');
@@ -177,10 +193,23 @@ class ApiService {
     final uri = Uri.parse('$baseUrl/login');
 
     try {
+      final deviceInfo = await DeviceInfoPlugin().androidInfo;
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      final ip = await getUserIp();
       final response = await http.post(
         uri,
         headers: {'Accept': 'application/json'},
-        body: {'username': username, 'password': password},
+        body: {
+          'username': username,
+          'password': password,
+          'device_id': deviceInfo.id, // ← penting!
+          'token': fcmToken ?? '',
+          'platform': 'android',
+          'os_version': deviceInfo.version.release,
+          'model': deviceInfo.model,
+          'is_rooted': '0',
+          "ip_address": ip,
+        },
       );
 
       print("Status: ${response.statusCode}");
@@ -236,8 +265,17 @@ class ApiService {
       // 1️⃣ Hapus FCM token di backend
       final fcmToken = await FirebaseMessaging.instance.getToken();
       if (fcmToken != null) {
-        final removeTokenUri = Uri.parse('$baseUrl/remove-token');
-        await http.post(removeTokenUri, body: {'token': fcmToken});
+        // final removeTokenUri = Uri.parse('$baseUrl/remove-token');
+        // await http.post(removeTokenUri, body: {'token': fcmToken});
+        final deviceInfo = await DeviceInfoPlugin().androidInfo;
+        await http.post(
+          Uri.parse('$baseUrl/remove-token'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'user_id': prefs.getInt('id_user'),
+            'device_id': deviceInfo.id,
+          }),
+        );
         print("FCM token dikirim untuk dihapus: $fcmToken");
       }
 

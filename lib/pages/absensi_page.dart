@@ -480,7 +480,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
   Future<void> _tampilkanNotifikasiLokasiGagal() async {
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
-          'lokasi_channel',
+          'notif_lokasi_absensi',
           'Peringatan Lokasi',
           channelDescription: 'Notifikasi saat perizinan lokasi gagal',
           importance: Importance.max,
@@ -498,7 +498,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
       'Aktifkan izin lokasi / GPS pada device Anda agar dapat melakukan absensi.',
       const NotificationDetails(
         android: AndroidNotificationDetails(
-          'lokasi_channel',
+          'notif_lokasi_absensi',
           'Peringatan Lokasi',
           channelDescription: 'Notifikasi saat perizinan lokasi gagal',
           importance: Importance.max,
@@ -535,7 +535,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
 
   Future<void> _tampilkanNotifikasiIzinKamera() async {
     const androidDetails = AndroidNotificationDetails(
-      'kamera_channel',
+      'notif_kamera_absensi',
       'Peringatan Kamera',
       channelDescription: 'Notifikasi saat izin kamera ditolak',
       importance: Importance.max,
@@ -556,7 +556,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
   Future<void> _tampilkanNotifikasiFakeGps() async {
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
-          'fake_gps_channel',
+          'notif_fakegps_absensi',
           'Deteksi Fake GPS',
           channelDescription:
               'Notifikasi jika pengguna menggunakan lokasi palsu',
@@ -803,7 +803,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
           result['message'],
           const NotificationDetails(
             android: AndroidNotificationDetails(
-              'absen_channel',
+              'notif_absensi',
               'Notifikasi E-Absensi',
               channelDescription: 'Notifikasi berhasil absensi',
               importance: Importance.max,
@@ -814,11 +814,11 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
       } else {
         await flutterLocalNotificationsPlugin.show(
           0,
-          'Ah Maaf!! Kode Error ${result['code']}!',
+          'Ahh Maaf!! Kode Error ${result['code']}!',
           result['message'],
           const NotificationDetails(
             android: AndroidNotificationDetails(
-              'absen_channel',
+              'notif_absensi',
               'Notifikasi E-Absensi',
               channelDescription: 'Notifikasi gagal absensi',
               importance: Importance.max,

@@ -90,8 +90,9 @@ class _SettingPageState extends State<SettingPage> {
 
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
-          'channel_id',
-          'channel_name',
+          'dummy_notif_absensi',
+          'Contoh Notifikasi E-Absensi',
+          channelDescription: 'Contoh E-Absensi menampilkan notifikasi Dummy',
           importance: Importance.max,
           priority: Priority.high,
         );

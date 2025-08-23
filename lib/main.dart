@@ -39,7 +39,7 @@ Future<void> _initNotifications() async {
 
   // Buat channel Android
   const AndroidNotificationChannel channel = AndroidNotificationChannel(
-    'eabsensi_channel',
+    'pengumuman_absensi',
     'E-Absensi Notifications',
     description: 'Notifikasi penting E-Absensi',
     importance: Importance.max,
@@ -52,43 +52,43 @@ Future<void> _initNotifications() async {
       ?.createNotificationChannel(channel);
 
   // Request permission (iOS)
-  await FirebaseMessaging.instance.requestPermission(
-    alert: true,
-    badge: true,
-    sound: true,
-  );
+  // await FirebaseMessaging.instance.requestPermission(
+  //   alert: true,
+  //   badge: true,
+  //   sound: true,
+  // );
 }
 
 // 🔹 Tampilkan notifikasi foreground saja
 Future<void> _showForegroundNotification(RemoteMessage message) async {
   final data = message.data;
-  final String? title = data['title'];
-  final String? body = data['body'];
+  // final String? title = data['title'];
+  // final String? body = data['body'];
+  final String title =
+      message.notification?.title ?? data['title'] ?? 'No Title';
+  final String body = message.notification?.body ?? data['body'] ?? 'No Body';
 
-  if (title != null && body != null) {
-    const AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-          'eabsensi_channel',
-          'E-Absensi Notifications',
-          channelDescription: 'Notifikasi penting E-Absensi',
-          importance: Importance.max,
-          priority: Priority.high,
-        );
+  final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    'pengumuman_absensi',
+    'E-Absensi Notifications',
+    channelDescription: 'Notifikasi penting E-Absensi',
+    importance: Importance.max,
+    priority: Priority.high,
+  );
 
-    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails();
+  const DarwinNotificationDetails iosDetails = DarwinNotificationDetails();
 
-    const NotificationDetails platformDetails = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
+  NotificationDetails platformDetails = NotificationDetails(
+    android: androidDetails,
+    iOS: iosDetails,
+  );
 
-    await flutterLocalNotificationsPlugin.show(
-      data.hashCode, // unik per pesan
-      title,
-      body,
-      platformDetails,
-    );
-  }
+  await flutterLocalNotificationsPlugin.show(
+    data.hashCode, // unik per pesan
+    title,
+    body,
+    platformDetails,
+  );
 }
 
 void main() async {
@@ -97,23 +97,29 @@ void main() async {
   await initializeDateFormatting('id', null);
   await Firebase.initializeApp();
 
-  // await _initNotifications();
+  await _initNotifications();
 
   // 🔹 Listener untuk foreground
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    print("🔔 Foreground message: ${message.data['title'] ?? 'No Title'}");
+    final title =
+        message.notification?.title ?? message.data['title'] ?? 'No Title';
+    final body =
+        message.notification?.body ?? message.data['body'] ?? 'No Body';
 
-    // Hanya tampilkan local notification jika app sedang foreground
-    if (message.data.containsKey('title') && message.data.containsKey('body')) {
-      _showForegroundNotification(message);
-    }
+    print("🔔 Foreground message: $title");
+
+    // Tampilkan notifikasi tray manual
+    _showForegroundNotification(message);
   });
 
   // 🔹 Listener untuk saat user tap notifikasi dari background / terminated
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-    print(
-      "📬 Dibuka dari background / terminated: ${message.data['title'] ?? 'No Title'}",
-    );
+    final title =
+        message.notification?.title ?? message.data['title'] ?? 'No Title';
+    final body =
+        message.notification?.body ?? message.data['body'] ?? 'No Body';
+
+    print("📬 Dibuka dari background / terminated: $title");
     // Navigasi halaman tertentu bisa dilakukan di sini
   });
 
