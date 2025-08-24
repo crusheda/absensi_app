@@ -141,6 +141,7 @@ class ApiService {
     required double latitude,
     required double longitude,
     required String jenis,
+    required bool isFakeGps,
     String? keterangan,
   }) async {
     final uri = Uri.parse('$baseUrl/absensi');
@@ -152,7 +153,8 @@ class ApiService {
       ..fields['nip'] = nip
       ..fields['latitude'] = latitude.toString()
       ..fields['longitude'] = longitude.toString()
-      ..fields['jenis'] = jenis;
+      ..fields['jenis'] = jenis
+      ..fields['is_fake_gps'] = isFakeGps ? '1' : '0';
     if (keterangan != null && keterangan.trim().isNotEmpty) {
       request.fields['keterangan'] = keterangan;
     }

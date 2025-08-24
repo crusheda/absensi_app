@@ -2,7 +2,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'package:in_app_update/in_app_update.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'login_page.dart';
+import '../services/api_service.dart';
+
+const platform = MethodChannel('com.sakudewa.absensi/integrity');
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -21,26 +28,49 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     super.initState();
     _loadAppVersion();
 
-    // Mulai animasi masuk
+    // Animasi masuk
     Future.delayed(const Duration(milliseconds: 700), () {
-      setState(() {
-        opacity = 1.0;
-        scale = 1.0;
-      });
+      if (mounted) {
+        setState(() {
+          opacity = 1.0;
+          scale = 1.0;
+        });
+      }
     });
 
-    // Jalankan semua future yang dibutuhkan saat splash
+    // Jalankan splash
     startSplash();
   }
 
-  void _loadAppVersion() async {
-    final info = await PackageInfo.fromPlatform();
-    setState(() {
-      _appVersion = 'Versi ${info.version}';
-    });
+  /// Cek apakah ada update aplikasi
+  Future<bool> checkForUpdate() async {
+    try {
+      AppUpdateInfo updateInfo = await InAppUpdate.checkForUpdate();
+
+      if (updateInfo.updateAvailability == UpdateAvailability.updateAvailable &&
+          updateInfo.immediateUpdateAllowed) {
+        await InAppUpdate.performImmediateUpdate().catchError((e) {
+          debugPrint("Update gagal: $e");
+        });
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Error cek update: $e");
+    }
+    return false;
   }
 
-  /// Fungsi transisi animasi ke LoginPage
+  /// Load versi aplikasi
+  void _loadAppVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() {
+        _appVersion = 'Versi ${info.version}';
+      });
+    }
+  }
+
+  /// Transisi animasi ke LoginPage
   Route _createRouteToLogin() {
     return PageRouteBuilder(
       transitionDuration: const Duration(milliseconds: 700),
@@ -65,14 +95,85 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     );
   }
 
-  /// Fungsi menjalankan splash + menunggu semua future
+  /// Ambil token dari native Kotlin
+  Future<String?> _getIntegrityToken() async {
+    try {
+      final String token = await platform.invokeMethod('checkIntegrity');
+      debugPrint("Integrity Token: $token");
+      return token;
+    } on PlatformException catch (e) {
+      debugPrint("Play Integrity gagal: ${e.message}");
+      return null;
+    }
+  }
+
+  /// Kirim token ke server Laravel untuk verifikasi
+  Future<bool> _verifyWithServer(String token) async {
+    try {
+      final response = await http.post(
+        Uri.parse(
+          '${ApiService.baseUrl}/verify_integrity',
+        ), // pakai baseUrl dari ApiService
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'integrity_token': token}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['valid'] == true;
+      } else {
+        debugPrint("Verifikasi server gagal: ${response.statusCode}");
+        return false;
+      }
+    } catch (e) {
+      debugPrint("Error verifikasi server: $e");
+      return false;
+    }
+  }
+
+  /// Jalankan splash dan cek semua validasi
   Future<void> startSplash() async {
-    await Future.wait([
-      Future.delayed(const Duration(seconds: 3)), // delay minimal splash
-    ]);
+    await Future.delayed(const Duration(seconds: 3)); // delay minimal splash
+
+    // cek update
+    bool isUpdating = await checkForUpdate();
+    if (!mounted || isUpdating) return;
+
+    // ambil token integrity
+    final token = await _getIntegrityToken();
+    bool isValid = false;
+    if (token != null) {
+      // verifikasi token ke Laravel
+      isValid = await _verifyWithServer(token);
+    }
+    debugPrint("Token Play Integrity anda sudah True / False : $isValid");
 
     if (!mounted) return;
 
+    if (!isValid) {
+      // Kalau gagal validasi → aplikasi tidak resmi
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => AlertDialog(
+          title: const Text("Aplikasi Tidak Resmi"),
+          content: const Text(
+            "Harap install aplikasi resmi dari Google Play Store.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                SystemNavigator.pop();
+              },
+              child: const Text("Tutup"),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // lanjut ke LoginPage
     Navigator.of(context).pushReplacement(_createRouteToLogin());
   }
 
@@ -86,7 +187,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
           : CupertinoColors.white,
       body: Stack(
         children: [
-          // Teks atas tengah dengan fade in
+          // Teks atas tengah
           Positioned(
             top: 80,
             left: 0,
@@ -104,9 +205,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                         style: TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.w800,
-                          color:
-                              CupertinoTheme.brightnessOf(context) ==
-                                  Brightness.dark
+                          color: isDark
                               ? CupertinoColors.white
                               : CupertinoColors.black,
                           decoration: TextDecoration.none,
@@ -121,13 +220,12 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ).createShader(bounds),
-                        child: Text(
+                        child: const Text(
                           'Absensi',
                           style: TextStyle(
                             fontSize: 26,
                             fontWeight: FontWeight.w800,
-                            color: Colors
-                                .white, // HARUS white agar gradient terlihat
+                            color: Colors.white,
                             decoration: TextDecoration.none,
                           ),
                         ),
@@ -149,7 +247,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
             ),
           ),
 
-          // Animasi tengah
+          // Animasi loading tengah
           Center(
             child: AnimatedOpacity(
               opacity: opacity,
@@ -167,7 +265,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
             ),
           ),
 
-          // Teks bawah tengah dengan fade in
+          // Teks bawah
           Positioned(
             bottom: 40,
             left: 0,

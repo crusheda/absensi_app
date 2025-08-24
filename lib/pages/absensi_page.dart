@@ -170,42 +170,6 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
         lokasiAbsensi!.latitude,
         lokasiAbsensi!.longitude,
       );
-
-      // if (jarak > radiusKantorMeter) {
-      //   setState(() {
-      //     aktifBerangkat = false;
-      //     aktifPulang = false;
-      //     aktifIjin = true;
-
-      //     // Kosongkan juga jadwal jika ingin
-      //     jadwalNama = "-";
-      //     jadwalJam = "-";
-      //     jadwalKeterangan = "Anda berada $jarak m di Luar Radius Rumah Sakit";
-      //     msgAbsensi =
-      //         "Anda hanya dapat mengajukan Ijin karena berada di luar radius.";
-      //   });
-      //   showCupertinoDialog(
-      //     context: context,
-      //     builder: (BuildContext context) {
-      //       return CupertinoAlertDialog(
-      //         title: const Text('Di Luar Radius Kantor'),
-      //         content: const Text(
-      //           'Anda berada di luar radius kantor (> 30 meter). Silakan mendekat ke area kantor untuk melakukan absensi.',
-      //         ),
-      //         actions: [
-      //           CupertinoDialogAction(
-      //             child: const Text('Tutup'),
-      //             isDefaultAction: true,
-      //             onPressed: () {
-      //               Navigator.of(context).pop();
-      //             },
-      //           ),
-      //         ],
-      //       );
-      //     },
-      //   );
-      //   return; // ⛔ stop, jangan lanjut ke cekValidasiTombol
-      // }
       try {
         final data = await ApiService.cekValidasiTombol(
           id_user: widget.id_user,
@@ -571,8 +535,8 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
 
     await flutterLocalNotificationsPlugin.show(
       1,
-      'Deteksi Lokasi Palsu',
-      'Aplikasi mendeteksi bahwa Anda menggunakan Fake GPS.',
+      'STOP KECURANGAN! Anda terdeteksi menggunakan Lokasi Palsu!',
+      'Aplikasi mendeteksi bahwa Anda menggunakan/mengatur lokasi dari aplikasi Fake GPS atau sejenisnya. Dilarang mengaktifkan aplikasi tersebut atau Anda siap menerima Risiko sesuai kebijakan yang telah ditentukan oleh bagian SDI.',
       notifDetails,
       payload: 'fake_gps_detected',
     );
@@ -791,6 +755,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
         longitude: long,
         jenis: jenis.kode,
         keterangan: keterangan,
+        isFakeGps: _isMocked,
       );
 
       if (!mounted) return;
