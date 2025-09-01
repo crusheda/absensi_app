@@ -1,6 +1,7 @@
 // Final Absensi Page dengan desain kotak seperti pada gambar terakhir
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -590,6 +591,8 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
       (cam) => cam.lensDirection == CameraLensDirection.back,
       orElse: () => cameras.first,
     );
+    final bool butuhKeterangan =
+        (jenis == AbsensiJenis.ijin || jenis == AbsensiJenis.dinasLuar);
 
     final pickedFile = await Navigator.of(context).push<XFile?>(
       CupertinoPageRoute(
@@ -597,7 +600,11 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
         builder: (_) => CustomCameraIOS(
           frontCamera: frontCamera,
           rearCamera: rearCamera,
-          allowSwitchCamera: jenis == AbsensiJenis.ijin,
+          allowSwitchCamera:
+              (jenis == AbsensiJenis.berangkat ||
+              jenis == AbsensiJenis.pulang ||
+              jenis == AbsensiJenis.ijin ||
+              jenis == AbsensiJenis.dinasLuar),
           // onPictureTaken: (_) {}, // optional, sudah tidak perlu
         ),
       ),
@@ -622,7 +629,11 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
       showCupertinoDialog(
         context: context,
         builder: (_) => CupertinoAlertDialog(
-          title: const Text("Konfirmasi Absensi"),
+          title: Text(
+            jenis == AbsensiJenis.dinasLuar
+                ? "Konfirmasi Dinas Luar"
+                : "Konfirmasi Ijin",
+          ),
           content: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -637,11 +648,13 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                   style: const TextStyle(fontSize: 14),
                 ),
               ),
-              if (jenis == AbsensiJenis.ijin) ...[
+              if (butuhKeterangan) ...[
                 const SizedBox(height: 12),
-                const Text(
-                  "Keterangan Ijin (Wajib Diisi)",
-                  style: TextStyle(
+                Text(
+                  jenis == AbsensiJenis.dinasLuar
+                      ? "Keterangan Dinas Luar (Wajib Diisi)"
+                      : "Keterangan Ijin (Wajib Diisi)",
+                  style: const TextStyle(
                     fontSize: 12,
                     color: CupertinoColors.systemGrey,
                     fontWeight: FontWeight.w600,
@@ -678,7 +691,9 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
               onPressed: () {
                 if (!mounted) return;
                 Navigator.pop(context);
-                _sedangSubmitAbsensi = false;
+                setState(() {
+                  _sedangSubmitAbsensi = false;
+                });
               },
             ),
             CupertinoDialogAction(
@@ -686,13 +701,18 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
               onPressed: () async {
                 if (!mounted) return;
                 Navigator.pop(context);
-                final keterangan = jenis == AbsensiJenis.ijin
-                    ? keteranganController.text.trim()
-                    : null;
 
-                await _submitAbsensi(file, lat, long, jenis, keterangan ?? '');
+                final keterangan = butuhKeterangan
+                    ? keteranganController.text.trim()
+                    : '';
+
+                await _submitAbsensi(file, lat, long, jenis, keterangan);
                 await _refreshLocation();
-                _sedangSubmitAbsensi = false;
+
+                if (!mounted) return;
+                setState(() {
+                  _sedangSubmitAbsensi = false;
+                });
               },
               child: const Text("Submit"),
             ),
@@ -1090,11 +1110,11 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                                         if (distance >= 1000) {
                                           final km = (distance / 1000)
                                               .toStringAsFixed(2);
-                                          return "Anda berada $km km jauh dari Radius Rumah Sakit";
+                                          return "Anda berada $km km jauh dari Radius RS";
                                         } else if (insideRadius) {
-                                          return "Anda berada di Dalam Radius Rumah Sakit (< 30m)";
+                                          return "Anda berada di Dalam Radius RS (< 30m)";
                                         } else {
-                                          return "Anda berada ${distance.toStringAsFixed(0)} m di Luar Radius Rumah Sakit";
+                                          return "Anda berada ${distance.toStringAsFixed(0)} m di Luar Radius RS";
                                         }
                                       }(), style: const TextStyle(fontSize: 14)),
                               ),
@@ -1208,16 +1228,62 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                           Expanded(
                             child: CupertinoButton(
                               padding: const EdgeInsets.symmetric(vertical: 12),
-                              color: Colors.amber,
+                              color: Colors.indigoAccent,
                               borderRadius: BorderRadius.circular(10),
                               onPressed:
                                   (_position != null &&
                                       !_izinLokasiDitolak &&
                                       aktifIjin)
-                                  ? () => _showCameraModal(AbsensiJenis.ijin)
+                                  ? () {
+                                      showCupertinoModalPopup(
+                                        context: context,
+                                        builder: (BuildContext context) =>
+                                            CupertinoActionSheet(
+                                              title: Text(
+                                                "Pilih Jenis",
+                                                style: TextStyle(
+                                                  color: isDark
+                                                      ? CupertinoColors.white
+                                                      : CupertinoColors
+                                                            .secondaryLabel,
+                                                  fontSize: 20,
+                                                ),
+                                              ),
+                                              actions: [
+                                                CupertinoActionSheetAction(
+                                                  onPressed: () {
+                                                    Navigator.pop(context);
+                                                    _showCameraModal(
+                                                      AbsensiJenis.ijin,
+                                                    );
+                                                  },
+                                                  child: const Text("Ijin"),
+                                                ),
+                                                CupertinoActionSheetAction(
+                                                  onPressed: () {
+                                                    Navigator.pop(context);
+                                                    _showCameraModal(
+                                                      AbsensiJenis.dinasLuar,
+                                                    );
+                                                  },
+                                                  child: const Text(
+                                                    "Dinas Luar",
+                                                  ),
+                                                ),
+                                              ],
+                                              cancelButton:
+                                                  CupertinoActionSheetAction(
+                                                    onPressed: () =>
+                                                        Navigator.pop(context),
+                                                    child: const Text("Batal"),
+                                                    isDefaultAction: true,
+                                                  ),
+                                            ),
+                                      );
+                                    }
                                   : null,
                               child: const Text(
-                                "IJIN",
+                                "LAINNYA",
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 15,

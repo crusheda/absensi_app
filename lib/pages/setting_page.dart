@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../theme_provider.dart';
 import '../services/api_service.dart';
 import 'login_page.dart';
+import 'profil_page.dart';
 
 class SettingPage extends StatefulWidget {
   final int id_user;
@@ -356,13 +357,24 @@ class _SettingPageState extends State<SettingPage> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     const SizedBox(height: 10),
-                    CircleAvatar(
-                      radius: 42,
-                      backgroundColor: CupertinoColors.systemGrey4,
-                      backgroundImage: isFotoAda
-                          ? NetworkImage(fotoUrl!)
-                          : const AssetImage('assets/user.png')
-                                as ImageProvider,
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          CupertinoPageRoute(
+                            builder: (context) =>
+                                ProfilePage(fotoProfil: widget.fotoProfil),
+                          ),
+                        );
+                      },
+                      child: CircleAvatar(
+                        radius: 42,
+                        backgroundColor: CupertinoColors.systemGrey4,
+                        backgroundImage: isFotoAda
+                            ? NetworkImage(fotoUrl!)
+                            : const AssetImage('assets/user.png')
+                                  as ImageProvider,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Text(

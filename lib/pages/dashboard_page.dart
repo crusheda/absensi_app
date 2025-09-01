@@ -1,3 +1,4 @@
+import 'package:absensi_app/pages/pdf_view_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
@@ -675,11 +676,51 @@ class _DashboardPageState extends State<DashboardPage> {
                   "Riwayat Absensi",
                   CupertinoIcons.clock,
                   CupertinoColors.systemIndigo,
+                  onTap: () {
+                    MainPageController.changeTab?.call(
+                      3,
+                    ); // Pindah ke tab Rekap
+                  },
                 ),
                 _buildActionTile(
-                  "Tata Cara Absensi",
+                  "Dokumentasi Absensi",
                   CupertinoIcons.book,
                   CupertinoColors.systemGreen,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      CupertinoPageRoute(
+                        builder: (_) => PdfViewPage(
+                          assetPath: 'assets/pdf/tata_cara_eabsensi.pdf',
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                _buildActionTile(
+                  "FAQ",
+                  CupertinoIcons.question_circle,
+                  CupertinoColors.link,
+                  onTap: () {
+                    showCupertinoDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return CupertinoAlertDialog(
+                          title: const Text("Fitur belum tersedia!"),
+                          content: const Text(
+                            "Fitur FAQ (Frequently Asked Questions) sedang dalam pengembangan. Mohon tunggu update berikutnya 😊",
+                          ),
+                          actions: [
+                            CupertinoDialogAction(
+                              isDefaultAction: true,
+                              child: const Text("Tutup"),
+                              onPressed: () => Navigator.of(context).pop(),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
                 ),
               ],
             ),
@@ -751,7 +792,12 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildActionTile(String title, IconData icon, Color color) {
+  Widget _buildActionTile(
+    String title,
+    IconData icon,
+    Color color, {
+    VoidCallback? onTap,
+  }) {
     final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -770,28 +816,7 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
       child: CupertinoButton(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        onPressed: () {
-          if (title == "Riwayat Absensi") {
-            MainPageController.changeTab?.call(3); // Pindah ke tab Rekap
-          } else if (title == "Tata Cara Absensi") {
-            showCupertinoDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return CupertinoAlertDialog(
-                  title: const Text("Ah, Maaf!"),
-                  content: const Text("Fitur belum tersedia untuk Saat ini :)"),
-                  actions: [
-                    CupertinoDialogAction(
-                      isDefaultAction: true,
-                      child: const Text("Tutup"),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                );
-              },
-            );
-          }
-        },
+        onPressed: onTap, // pakai callback
         child: Row(
           children: [
             Icon(icon, color: color),
@@ -803,7 +828,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   fontSize: 13,
                   color: isDark
                       ? CupertinoColors.systemGrey4
-                      : Color.fromARGB(255, 5, 5, 5),
+                      : const Color.fromARGB(255, 5, 5, 5),
                 ),
               ),
             ),

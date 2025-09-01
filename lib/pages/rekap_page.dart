@@ -59,6 +59,7 @@ class RekapPage extends StatefulWidget {
 }
 
 class _RekapPageState extends State<RekapPage> {
+  bool isError = false;
   bool isLoading = true;
   String selectedFilter = '1';
   List<RiwayatModel> riwayat = [];
@@ -78,7 +79,7 @@ class _RekapPageState extends State<RekapPage> {
 
   Map<String, String> getFilterOptions() {
     final now = DateTime.now();
-    final dateFormat = DateFormat('MMMM yyyy', 'id');
+    final dateFormat = DateFormat('MMM yyyy', 'id');
 
     final twoMonthsAgo = DateTime(now.year, now.month - 2);
     final oneMonthAgo = DateTime(now.year, now.month - 1);
@@ -99,6 +100,9 @@ class _RekapPageState extends State<RekapPage> {
     if (now.day > 20) {
       options['5'] = '21 ${dateFormat.format(currentMonth)} - Sekarang';
     }
+
+    options['8'] = 'Dinas Luar Selama Tahun ${now.year}';
+    options['9'] = 'Ijin Selama Tahun ${now.year}';
 
     return options;
   }
@@ -164,17 +168,26 @@ class _RekapPageState extends State<RekapPage> {
         final List<dynamic> show = jsonResponse['show'] ?? [];
 
         setState(() {
+          isError = false;
           riwayat = show.map((item) => RiwayatModel.fromJson(item)).toList();
           tepatWaktu = jsonResponse['tepatWaktu'] ?? 0;
           terlambat = jsonResponse['terlambat'] ?? 0;
           absenone = jsonResponse['absenOne'] ?? 0;
         });
       } else {
+        setState(() {
+          isError = true;
+          riwayat = [];
+        });
         print("Gagal memuat data riwayat: ${response.body}");
         _showApiErrorPopup("Periksa koneksi atau hubungi admin.");
       }
     } catch (e) {
+      setState(() {
+        isError = true;
+      });
       print("Exception: $e");
+      _showApiErrorPopup("Periksa koneksi atau hubungi admin.");
     } finally {
       setState(() => isLoading = false);
       // _showApiErrorPopup("Periksa koneksi atau hubungi admin.");
@@ -415,21 +428,21 @@ class _RekapPageState extends State<RekapPage> {
                     children: [
                       _buildStatBox(
                         "Tepat Waktu",
-                        "${tepatWaktu}x",
+                        isError ? "xx" : "${tepatWaktu}x",
                         CupertinoColors.activeGreen,
                         loading: isLoading,
                       ),
                       const SizedBox(width: 8),
                       _buildStatBox(
                         "Terlambat",
-                        "${terlambat}x",
+                        isError ? "xx" : "${terlambat}x",
                         CupertinoColors.systemRed,
                         loading: isLoading,
                       ),
                       const SizedBox(width: 8),
                       _buildStatBox(
                         "Absen 1x",
-                        "${absenone}x",
+                        isError ? "xx" : "${absenone}x",
                         CupertinoColors.systemOrange,
                         loading: isLoading,
                       ),
@@ -447,7 +460,9 @@ class _RekapPageState extends State<RekapPage> {
                       : (riwayat.isEmpty
                             ? Center(
                                 child: Text(
-                                  "Data Absensi tidak ada",
+                                  isError
+                                      ? "Data Absensi Gagal ditampilkan"
+                                      : "Data Absensi tidak ada",
                                   style: TextStyle(
                                     fontSize: 16,
                                     color: isDark
@@ -488,6 +503,11 @@ class _RekapPageState extends State<RekapPage> {
                                         .exclamationmark_circle_fill;
                                     iconColor = CupertinoColors.systemOrange;
                                     label = "Absen 1x";
+                                  } else if (item.jenis == 4) {
+                                    iconData = CupertinoIcons
+                                        .exclamationmark_circle_fill;
+                                    iconColor = CupertinoColors.systemMint;
+                                    label = "Dinas Luar";
                                   } else {
                                     iconData =
                                         CupertinoIcons.check_mark_circled_solid;

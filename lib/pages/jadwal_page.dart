@@ -24,6 +24,10 @@ class _JadwalPageState extends State<JadwalPage> {
   bool isLoading = true;
   bool jadwalKosong = false;
 
+  bool isSameDate(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
   // Helper mapping icon
   IconData? getIconData(String? name) {
     switch (name) {
@@ -135,7 +139,7 @@ class _JadwalPageState extends State<JadwalPage> {
     );
   }
 
-  Widget buildDateCell(DateTime date, bool isCurrentMonth) {
+  Widget buildDateCell(DateTime date, bool isCurrentMonth, bool isToday) {
     final key = date.day.toString().padLeft(2, '0');
     final status = isCurrentMonth ? jadwalData[key] : null;
     final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
@@ -162,6 +166,12 @@ class _JadwalPageState extends State<JadwalPage> {
               ? CupertinoColors.secondaryLabel
               : CupertinoColors.white,
           borderRadius: BorderRadius.circular(8),
+          border: isToday
+              ? Border.all(
+                  color: CupertinoColors.activeBlue, // 👈 tanda khusus hari ini
+                  width: 2,
+                )
+              : null,
         ),
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Column(
@@ -296,8 +306,14 @@ class _JadwalPageState extends State<JadwalPage> {
                 physics: const NeverScrollableScrollPhysics(),
                 children: calendarDates
                     .map(
-                      (date) =>
-                          buildDateCell(date, date.month == selectedDate.month),
+                      (date) => buildDateCell(
+                        date,
+                        date.month == selectedDate.month,
+                        isSameDate(
+                          date,
+                          DateTime.now(),
+                        ), // 👈 cek apakah ini hari ini
+                      ),
                     )
                     .toList(),
               ),

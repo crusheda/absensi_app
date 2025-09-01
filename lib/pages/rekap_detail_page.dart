@@ -28,6 +28,8 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
         return 'Tidak Diketahui!';
       case '3':
         return 'Ijin/Tidak Masuk';
+      case '4':
+        return 'Dinas Luar';
       default:
         return 'Tidak Diketahui!';
     }
@@ -41,6 +43,8 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
         return CupertinoColors.activeGreen;
       case '3':
         return CupertinoColors.activeOrange;
+      case '4':
+        return CupertinoColors.systemMint;
       default:
         return CupertinoColors.systemGrey;
     }
@@ -124,7 +128,7 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
     return SizedBox(
       height: 150,
       child: FlutterMap(
-        options: MapOptions(center: LatLng(lat, lon), zoom: 15.0),
+        options: MapOptions(center: LatLng(lat, lon), zoom: 17.0),
         children: [
           TileLayer(
             urlTemplate:

@@ -1,4 +1,4 @@
-enum AbsensiJenis { berangkat, pulang, ijin }
+enum AbsensiJenis { berangkat, pulang, ijin, dinasLuar }
 
 extension AbsensiJenisExtension on AbsensiJenis {
   /// Kode yang dikirim ke backend Laravel (1: Berangkat, 2: Pulang, 3: Izin)
@@ -10,6 +10,8 @@ extension AbsensiJenisExtension on AbsensiJenis {
         return '2';
       case AbsensiJenis.ijin:
         return '3';
+      case AbsensiJenis.dinasLuar:
+        return '4';
     }
   }
 
@@ -22,6 +24,8 @@ extension AbsensiJenisExtension on AbsensiJenis {
         return 'Absen Pulang';
       case AbsensiJenis.ijin:
         return 'Izin Tidak Hadir';
+      case AbsensiJenis.dinasLuar:
+        return 'Dinas Luar';
     }
   }
 

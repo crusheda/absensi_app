@@ -103,6 +103,7 @@ class ApiService {
       },
     );
 
+    print("Raw response: ${response.body}");
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return {
@@ -224,6 +225,9 @@ class ApiService {
         if (data['token'] != null) {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('token', data['token']);
+          await prefs.setString('alamat', data['user']['alamat'] ?? '');
+          await prefs.setString('noHp', data['user']['no_hp'] ?? '');
+          await prefs.setString('email', data['user']['email'] ?? '');
         }
 
         return {
@@ -234,6 +238,9 @@ class ApiService {
           'name': data['user']['name'],
           'nama': data['user']['nama'],
           'foto_profil': data['user']['foto_profil'] ?? '',
+          'alamat': data['user']['alamat'] ?? '',
+          'noHp': data['user']['noHp'] ?? '',
+          'email': data['user']['email'] ?? '',
         };
       } else {
         // Tetap coba decode meskipun status bukan 200
