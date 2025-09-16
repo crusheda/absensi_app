@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:absensi_app/models/absensi_enum.dart';
 import 'package:image/image.dart' as img;
 import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
@@ -8,12 +9,14 @@ class CustomCameraIOS extends StatefulWidget {
   final CameraDescription frontCamera;
   final CameraDescription rearCamera;
   final bool allowSwitchCamera;
+  final AbsensiJenis jenis;
 
   const CustomCameraIOS({
     super.key,
     required this.frontCamera,
     required this.rearCamera,
     required this.allowSwitchCamera,
+    required this.jenis,
   });
 
   @override
@@ -129,6 +132,21 @@ class _CustomCameraIOSState extends State<CustomCameraIOS> {
     }
   }
 
+  // String _getCameraTitle(AbsensiJenis jenis) {
+  //   switch (jenis) {
+  //     case AbsensiJenis.berangkat:
+  //       return "Absensi Berangkat";
+  //     case AbsensiJenis.pulang:
+  //       return "Absensi Pulang";
+  //     case AbsensiJenis.ijin:
+  //       return "Absensi Ijin";
+  //     case AbsensiJenis.dinasLuar:
+  //       return "Absensi Dinas Luar";
+  //     default:
+  //       return "E-Absensi";
+  //   }
+  // }
+
   Future<File> _flipImageHorizontal(File file) async {
     final bytes = await file.readAsBytes();
     final image = img.decodeImage(bytes)!;
@@ -224,7 +242,7 @@ class _CustomCameraIOSState extends State<CustomCameraIOS> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      "E-Absensi",
+                      widget.jenis.label,
                       style: TextStyle(
                         color: isDark
                             ? CupertinoColors.white

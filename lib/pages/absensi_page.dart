@@ -666,6 +666,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
               jenis == AbsensiJenis.pulang ||
               jenis == AbsensiJenis.ijin ||
               jenis == AbsensiJenis.dinasLuar),
+          jenis: jenis,
           // onPictureTaken: (_) {}, // optional, sudah tidak perlu
         ),
       ),

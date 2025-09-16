@@ -5,6 +5,9 @@ import '../services/api_service.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 class AbsensiNotifikasiService {
+  static final FlutterLocalNotificationsPlugin _plugin =
+      FlutterLocalNotificationsPlugin();
+
   static Future<void> scheduleAbsensiReminder(int user) async {
     final url = Uri.parse("${ApiService.baseUrl}/reminder/shift?id_user=$user");
 
@@ -24,9 +27,6 @@ class AbsensiNotifikasiService {
         print("[REMINDER] Sekarang: $now");
         print("[REMINDER] Jadwal notifikasi: $scheduledTime");
 
-        // Inisialisasi plugin notifikasi
-        final plugin = FlutterLocalNotificationsPlugin();
-
         const androidDetails = AndroidNotificationDetails(
           'absen_channel',
           'Pengingat Absensi',
@@ -35,33 +35,27 @@ class AbsensiNotifikasiService {
           priority: Priority.high,
           ticker: 'ticker',
         );
-        print(
-          "[REMINDER] Selisih detik: ${scheduledTime.difference(now).inSeconds}",
-        );
 
-        // Tentukan apakah tampilkan langsung atau dijadwalkan
+        // Tampilkan langsung jika waktunya sudah lewat
         if (scheduledTime.isBefore(now) ||
             scheduledTime.isAtSameMomentAs(now)) {
-          print(
-            "[REMINDER] Waktu notifikasi sudah lewat atau sekarang, tampilkan langsung.",
-          );
-          await plugin.show(
+          print("[REMINDER] Waktu notifikasi sudah lewat, tampilkan langsung.");
+          await _plugin.show(
             0,
             'Pengingat Absensi',
             'Jaga ${data['shift']} akan dimulai.\nAbsen Masuk pukul ${data['jam']}!',
             const NotificationDetails(android: androidDetails),
           );
         } else {
-          print("[REMINDER] Waktu masih di masa depan, dijadwalkan.");
-          await plugin.zonedSchedule(
+          print("[REMINDER] Jadwalkan notifikasi di masa depan.");
+          await _plugin.zonedSchedule(
             0,
             'Pengingat Absensi',
             'Jaga ${data['shift']} akan dimulai 1 jam lagi.\nAbsen Masuk pukul ${data['jam']}!',
             scheduledTime,
             const NotificationDetails(android: androidDetails),
-            androidAllowWhileIdle: true,
-            uiLocalNotificationDateInterpretation:
-                UILocalNotificationDateInterpretation.absoluteTime,
+            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+            // Hapus uiLocalNotificationDateInterpretation
           );
           print("[REMINDER] Notifikasi berhasil dijadwalkan!");
         }
