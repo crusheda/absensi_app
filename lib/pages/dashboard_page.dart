@@ -11,8 +11,10 @@ import '../services/api_service.dart';
 import '../models/dashboard_data.dart';
 import 'main_page.dart';
 import 'jadwal_page.dart';
+import 'faq_page.dart';
 import 'package:absensi_app/pages/rekap_page.dart'; // ganti sesuai path kamu
 import 'dart:convert';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class DashboardPage extends StatefulWidget {
   final int id_user;
@@ -297,7 +299,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         radius: 24,
                         backgroundColor: CupertinoColors.systemGrey4,
                         backgroundImage: isFotoAda
-                            ? NetworkImage(fotoUrl!)
+                            ? CachedNetworkImageProvider(fotoUrl!)
                             : const AssetImage('assets/user.png')
                                   as ImageProvider,
                       ),
@@ -605,10 +607,11 @@ class _DashboardPageState extends State<DashboardPage> {
                               backgroundImage:
                                   (fotoUrlAdminJadwal != null &&
                                       fotoUrlAdminJadwal.isNotEmpty)
-                                  ? NetworkImage(
+                                  ? CachedNetworkImageProvider(
                                       "${ApiService.simrsUrl}/storage/${fotoUrlAdminJadwal.replaceFirst('public/', '')}",
                                     )
-                                  : const AssetImage('assets/user.png'),
+                                  : const AssetImage('assets/user.png')
+                                        as ImageProvider,
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -672,55 +675,77 @@ class _DashboardPageState extends State<DashboardPage> {
                     : const SizedBox.shrink(),
 
                 const SizedBox(height: 20),
-                _buildActionTile(
-                  "Riwayat Absensi",
-                  CupertinoIcons.clock,
-                  CupertinoColors.systemIndigo,
-                  onTap: () {
-                    MainPageController.changeTab?.call(
-                      3,
-                    ); // Pindah ke tab Rekap
-                  },
-                ),
-                _buildActionTile(
-                  "Dokumentasi Absensi",
-                  CupertinoIcons.book,
-                  CupertinoColors.systemGreen,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      CupertinoPageRoute(
-                        builder: (_) => PdfViewPage(
-                          assetPath: 'assets/pdf/tata_cara_eabsensi.pdf',
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                _buildActionTile(
-                  "FAQ",
-                  CupertinoIcons.question_circle,
-                  CupertinoColors.link,
-                  onTap: () {
-                    showCupertinoDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return CupertinoAlertDialog(
-                          title: const Text("Fitur belum tersedia!"),
-                          content: const Text(
-                            "Fitur FAQ (Frequently Asked Questions) sedang dalam pengembangan. Mohon tunggu update berikutnya 😊",
-                          ),
-                          actions: [
-                            CupertinoDialogAction(
-                              isDefaultAction: true,
-                              child: const Text("Tutup"),
-                              onPressed: () => Navigator.of(context).pop(),
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 5,
+                  crossAxisSpacing: 20,
+                  childAspectRatio: 2.5, // bisa diatur
+                  children: [
+                    _buildActionTile(
+                      "Riwayat",
+                      CupertinoIcons.clock,
+                      CupertinoColors.systemIndigo,
+                      onTap: () {
+                        MainPageController.changeTab?.call(
+                          3,
+                        ); // pindah ke Rekap
+                      },
+                    ),
+                    _buildActionTile(
+                      "Dokumentasi",
+                      CupertinoIcons.book,
+                      CupertinoColors.systemGreen,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          CupertinoPageRoute(
+                            builder: (_) => PdfViewPage(
+                              assetPath: 'assets/pdf/tata_cara_eabsensi.pdf',
                             ),
-                          ],
+                          ),
                         );
                       },
-                    );
-                  },
+                    ),
+                    _buildActionTile(
+                      "FAQ",
+                      CupertinoIcons.question_circle,
+                      CupertinoColors.link,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          CupertinoPageRoute(
+                            builder: (context) => const FaqPage(),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildActionTile(
+                      "Berita",
+                      CupertinoIcons.news,
+                      CupertinoColors.systemMint,
+                      onTap: () {
+                        showCupertinoDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return CupertinoAlertDialog(
+                              title: const Text("Fitur belum tersedia!"),
+                              content: const Text(
+                                "Fitur Berita Terkini masih dalam proses pengembangan oleh Developer. Mohon tunggu update berikutnya 😊",
+                              ),
+                              actions: [
+                                CupertinoDialogAction(
+                                  isDefaultAction: true,
+                                  child: const Text("Tutup"),
+                                  onPressed: () => Navigator.of(context).pop(),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -799,44 +824,49 @@ class _DashboardPageState extends State<DashboardPage> {
     VoidCallback? onTap,
   }) {
     final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: isDark ? CupertinoColors.secondaryLabel : CupertinoColors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? CupertinoColors.black
-                : CupertinoColors.black.withOpacity(0.2),
-            blurRadius: 4,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: CupertinoButton(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        onPressed: onTap, // pakai callback
-        child: Row(
-          children: [
-            Icon(icon, color: color),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: isDark
-                      ? CupertinoColors.systemGrey4
-                      : const Color.fromARGB(255, 5, 5, 5),
-                ),
-              ),
-            ),
-            const Icon(
-              CupertinoIcons.right_chevron,
-              color: CupertinoColors.systemGrey,
+    return SizedBox(
+      height: 10, // ✅ semua tombol jadi tinggi 60 px
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: isDark
+              ? CupertinoColors.secondaryLabel
+              : CupertinoColors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? CupertinoColors.black
+                  : CupertinoColors.black.withOpacity(0.2),
+              blurRadius: 4,
+              offset: const Offset(0, 3),
             ),
           ],
+        ),
+        child: CupertinoButton(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          onPressed: onTap,
+          child: Row(
+            children: [
+              Icon(icon, color: color),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark
+                        ? CupertinoColors.systemGrey4
+                        : const Color.fromARGB(255, 5, 5, 5),
+                  ),
+                ),
+              ),
+              const Icon(
+                CupertinoIcons.right_chevron,
+                color: CupertinoColors.systemGrey,
+              ),
+            ],
+          ),
         ),
       ),
     );

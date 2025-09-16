@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../services/api_service.dart';
 import 'dart:ui';
 
@@ -144,7 +145,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           color: CupertinoColors.systemGrey4,
                           image: fotoUrl != null && fotoUrl!.isNotEmpty
                               ? DecorationImage(
-                                  image: NetworkImage(fotoUrl!),
+                                  image: CachedNetworkImageProvider(fotoUrl!),
                                   fit: BoxFit.cover,
                                 )
                               : const DecorationImage(

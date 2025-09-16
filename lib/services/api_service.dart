@@ -12,8 +12,8 @@ import 'package:dart_ipify/dart_ipify.dart';
 class ApiService {
   // Ganti sesuai URL API Laravel kamu
   // static const String baseUrl = "http://192.168.254.80:8000/api";
-  // static const String baseUrl = "http://192.168.1.35:8000/api";
-  static const String baseUrl = "https://absensi.simrsmu.com/api";
+  static const String baseUrl = "http://192.168.1.35:8000/api";
+  // static const String baseUrl = "https://absensi.simrsmu.com/api";
   static const String simrsUrl = "https://simrsmu.com";
 
   static Future<LatLng> getLokasiKantor() async {
@@ -33,6 +33,16 @@ class ApiService {
       return ipv4;
     } catch (e) {
       return "unknown";
+    }
+  }
+
+  static Future<List<dynamic>> getFaq() async {
+    final response = await http.get(Uri.parse('$baseUrl/faq'));
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return data['show']; // sesuaikan struktur JSON API kamu
+    } else {
+      throw Exception('Gagal memuat FAQ');
     }
   }
 

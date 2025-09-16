@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../theme_provider.dart';
 import '../services/api_service.dart';
 import 'login_page.dart';
@@ -371,7 +372,7 @@ class _SettingPageState extends State<SettingPage> {
                         radius: 42,
                         backgroundColor: CupertinoColors.systemGrey4,
                         backgroundImage: isFotoAda
-                            ? NetworkImage(fotoUrl!)
+                            ? CachedNetworkImageProvider(fotoUrl!)
                             : const AssetImage('assets/user.png')
                                   as ImageProvider,
                       ),

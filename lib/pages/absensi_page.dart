@@ -573,6 +573,67 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
     }
   }
 
+  Widget _buildDialogTitle(AbsensiJenis jenis) {
+    if (jenis == AbsensiJenis.berangkat) {
+      return RichText(
+        textAlign: TextAlign.center,
+        text: TextSpan(
+          style: const TextStyle(color: CupertinoColors.black, fontSize: 18),
+          children: [
+            const TextSpan(text: "Konfirmasi "),
+            TextSpan(
+              text: "Absensi",
+              style: const TextStyle(color: Colors.blueAccent),
+            ),
+          ],
+        ),
+      );
+    } else if (jenis == AbsensiJenis.pulang) {
+      return RichText(
+        textAlign: TextAlign.center,
+        text: TextSpan(
+          style: const TextStyle(color: CupertinoColors.black, fontSize: 18),
+          children: [
+            const TextSpan(text: "Konfirmasi "),
+            TextSpan(
+              text: "Absensi",
+              style: const TextStyle(color: Colors.redAccent),
+            ),
+          ],
+        ),
+      );
+    } else if (jenis == AbsensiJenis.dinasLuar) {
+      return RichText(
+        textAlign: TextAlign.center,
+        text: TextSpan(
+          style: const TextStyle(color: CupertinoColors.black, fontSize: 18),
+          children: [
+            const TextSpan(text: "Konfirmasi "),
+            TextSpan(
+              text: "Dinas Luar",
+              style: const TextStyle(color: Colors.orangeAccent),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // jenis == AbsensiJenis.ijin
+      return RichText(
+        textAlign: TextAlign.center,
+        text: TextSpan(
+          style: const TextStyle(color: CupertinoColors.black, fontSize: 18),
+          children: [
+            const TextSpan(text: "Konfirmasi "),
+            TextSpan(
+              text: "Ijin",
+              style: const TextStyle(color: Colors.orangeAccent),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
   late List<CameraDescription> cameras = [];
   Future<void> _showCameraModal(AbsensiJenis jenis) async {
     await _requestCameraPermission();
@@ -629,11 +690,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
       showCupertinoDialog(
         context: context,
         builder: (_) => CupertinoAlertDialog(
-          title: Text(
-            jenis == AbsensiJenis.dinasLuar
-                ? "Konfirmasi Dinas Luar"
-                : "Konfirmasi Ijin",
-          ),
+          title: _buildDialogTitle(jenis),
           content: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
