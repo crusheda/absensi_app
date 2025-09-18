@@ -574,13 +574,19 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
   }
 
   Widget _buildDialogTitle(AbsensiJenis jenis) {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     if (jenis == AbsensiJenis.berangkat) {
       return RichText(
         textAlign: TextAlign.center,
         text: TextSpan(
           style: const TextStyle(color: CupertinoColors.black, fontSize: 18),
           children: [
-            const TextSpan(text: "Konfirmasi "),
+            TextSpan(
+              text: "Konfirmasi ",
+              style: TextStyle(
+                color: isDark ? CupertinoColors.systemGrey4 : Colors.black87,
+              ),
+            ),
             TextSpan(
               text: "Absensi",
               style: const TextStyle(color: Colors.blueAccent),
@@ -594,7 +600,12 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
         text: TextSpan(
           style: const TextStyle(color: CupertinoColors.black, fontSize: 18),
           children: [
-            const TextSpan(text: "Konfirmasi "),
+            TextSpan(
+              text: "Konfirmasi ",
+              style: TextStyle(
+                color: isDark ? CupertinoColors.systemGrey4 : Colors.black87,
+              ),
+            ),
             TextSpan(
               text: "Absensi",
               style: const TextStyle(color: Colors.redAccent),
@@ -608,7 +619,12 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
         text: TextSpan(
           style: const TextStyle(color: CupertinoColors.black, fontSize: 18),
           children: [
-            const TextSpan(text: "Konfirmasi "),
+            TextSpan(
+              text: "Konfirmasi ",
+              style: TextStyle(
+                color: isDark ? CupertinoColors.systemGrey4 : Colors.black87,
+              ),
+            ),
             TextSpan(
               text: "Dinas Luar",
               style: const TextStyle(color: Colors.orangeAccent),
@@ -623,7 +639,12 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
         text: TextSpan(
           style: const TextStyle(color: CupertinoColors.black, fontSize: 18),
           children: [
-            const TextSpan(text: "Konfirmasi "),
+            TextSpan(
+              text: "Konfirmasi ",
+              style: TextStyle(
+                color: isDark ? CupertinoColors.systemGrey4 : Colors.black87,
+              ),
+            ),
             TextSpan(
               text: "Ijin",
               style: const TextStyle(color: Colors.orangeAccent),
@@ -674,12 +695,19 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
 
     if (pickedFile != null) {
       final originalFile = File(pickedFile.path);
-      final file = await _compressAndResizeImage(originalFile);
 
-      if (file == null) {
-        debugPrint("Gagal kompres foto");
-        _sedangSubmitAbsensi = false;
-        return;
+      // ✅ Kondisi hanya compress kalau BERANGKAT / PULANG
+      late File file;
+      if (jenis == AbsensiJenis.berangkat || jenis == AbsensiJenis.pulang) {
+        final compressed = await _compressAndResizeImage(originalFile);
+        if (compressed == null) {
+          debugPrint("Gagal kompres foto");
+          _sedangSubmitAbsensi = false;
+          return;
+        }
+        file = compressed;
+      } else {
+        file = originalFile;
       }
 
       final lat = _position?.latitude;
@@ -1125,7 +1153,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                       decoration: BoxDecoration(
                         color: isDark
                             ? CupertinoColors.secondaryLabel
-                            : CupertinoColors.white,
+                            : CupertinoColors.white.withOpacity(0.9),
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
@@ -1249,7 +1277,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                       decoration: BoxDecoration(
                         color: isDark
                             ? CupertinoColors.secondaryLabel
-                            : CupertinoColors.white,
+                            : CupertinoColors.white.withOpacity(0.9),
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(

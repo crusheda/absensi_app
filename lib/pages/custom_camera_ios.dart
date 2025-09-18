@@ -181,15 +181,16 @@ class _CustomCameraIOSState extends State<CustomCameraIOS> {
           // ✅ Preview Kamera atau Foto
           if (_capturedFile == null) ...[
             Center(
-              child: SizedBox(
-                width: screenWidth,
-                height: previewHeight,
-                child: FittedBox(
-                  fit: BoxFit.cover, // atau BoxFit.contain => pilih sendiri
-                  child: SizedBox(
-                    width: _controller!.value.previewSize!.height,
-                    height: _controller!.value.previewSize!.width,
-                    child: CameraPreview(_controller!),
+              child: ClipRect(
+                child: OverflowBox(
+                  alignment: Alignment.center,
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: _controller!.value.previewSize!.height,
+                      height: _controller!.value.previewSize!.width,
+                      child: CameraPreview(_controller!),
+                    ),
                   ),
                 ),
               ),
@@ -200,21 +201,18 @@ class _CustomCameraIOSState extends State<CustomCameraIOS> {
                 width: screenWidth,
                 height: previewHeight,
                 child: FittedBox(
-                  fit: BoxFit.cover, // atau contain
+                  fit: BoxFit.cover,
                   child: SizedBox(
                     width: _controller!.value.previewSize!.height,
                     height: _controller!.value.previewSize!.width,
-                    child: Image.file(
-                      _capturedFile!,
-                      fit: BoxFit.cover, // biar mirip preview
-                    ),
+                    child: Image.file(_capturedFile!, fit: BoxFit.cover),
                   ),
                 ),
               ),
             ),
           ],
 
-          // ✅ Swap kamera & Flash
+          // ✅ Header (Back, Title, Switch, Flash)
           Positioned(
             top: 60,
             left: 20,
@@ -226,7 +224,6 @@ class _CustomCameraIOSState extends State<CustomCameraIOS> {
                 // Bagian KIRI
                 Row(
                   children: [
-                    // TOMBOL KEMBALI
                     CupertinoButton(
                       padding: EdgeInsets.zero,
                       child: Icon(
@@ -258,7 +255,6 @@ class _CustomCameraIOSState extends State<CustomCameraIOS> {
                 // Bagian KANAN
                 Row(
                   children: [
-                    // TOMBOL SWAP KAMERA
                     if (widget.allowSwitchCamera)
                       CupertinoButton(
                         padding: EdgeInsets.zero,
@@ -291,103 +287,87 @@ class _CustomCameraIOSState extends State<CustomCameraIOS> {
             ),
           ),
 
-          // ✅ Tombol bawah
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 60, left: 20, right: 20),
-              child: _capturedFile == null
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            "Foto Selfie hanya sebagai\nbukti bahwa Anda telah\nmelakukan Absensi",
-                            style: TextStyle(
-                              color: isDark
-                                  ? CupertinoColors.white
-                                  : CupertinoColors.black,
-                              fontSize: 16,
-                              decoration: TextDecoration.none,
-                              height: 1.4,
-                            ),
-                            textAlign: TextAlign.left,
-                          ),
-                        ),
-                        const SizedBox(width: 60),
-                        GestureDetector(
-                          onTap: _takePicture,
-                          child: AnimatedScale(
-                            scale: _isCapturing ? 0.9 : 1.0,
-                            duration: const Duration(milliseconds: 120),
-                            curve: Curves.easeOut,
-                            child: Container(
-                              width: 80,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: isDark
-                                    ? CupertinoColors.white
-                                    : CupertinoColors.secondarySystemFill,
-                                border: Border.all(
-                                  color: CupertinoColors.activeBlue,
-                                  width: 4,
-                                ),
-                              ),
-                              child: const Center(
-                                child: Icon(
-                                  CupertinoIcons.camera_fill,
-                                  color: CupertinoColors.black,
-                                  size: 28,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CupertinoButton(
-                          padding: const EdgeInsets.all(16),
-                          child: Icon(
-                            CupertinoIcons.xmark_circle_fill,
-                            color: isDark
-                                ? CupertinoColors.white
-                                : CupertinoColors.black,
-                            size: 50,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _capturedFile = null;
-                            });
-                          },
-                        ),
-                        const SizedBox(width: 60),
-                        CupertinoButton(
-                          padding: const EdgeInsets.all(16),
-                          child: Icon(
-                            CupertinoIcons.check_mark_circled_solid,
-                            color: isDark
-                                ? CupertinoColors.white
-                                : CupertinoColors.black,
-                            size: 50,
-                          ),
-                          onPressed: () {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (mounted) {
-                                Navigator.of(
-                                  context,
-                                ).pop(XFile(_capturedFile!.path));
-                              }
-                            });
-                          },
+          // ✅ Tombol bawah (selalu fix di bawah)
+          if (_capturedFile == null)
+            Positioned(
+              bottom: 40,
+              left: 0,
+              right: 0,
+              child: GestureDetector(
+                onTap: _takePicture,
+                child: AnimatedScale(
+                  scale: _isCapturing ? 0.9 : 1.0,
+                  duration: const Duration(milliseconds: 120),
+                  curve: Curves.easeOut,
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: CupertinoColors.white,
+                      border: Border.all(
+                        color: CupertinoColors.activeBlue,
+                        width: 4,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
+                    child: const Center(
+                      child: Icon(
+                        CupertinoIcons.camera_fill,
+                        color: CupertinoColors.black,
+                        size: 40,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            )
+          else
+            Positioned(
+              bottom: 40,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CupertinoButton(
+                    padding: const EdgeInsets.all(16),
+                    child: Icon(
+                      CupertinoIcons.xmark_circle_fill,
+                      color: CupertinoColors.destructiveRed,
+                      size: 65,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _capturedFile = null;
+                      });
+                    },
+                  ),
+                  const SizedBox(width: 60),
+                  CupertinoButton(
+                    padding: const EdgeInsets.all(16),
+                    child: Icon(
+                      CupertinoIcons.check_mark_circled_solid,
+                      color: CupertinoColors.activeBlue,
+                      size: 65,
+                    ),
+                    onPressed: () {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          Navigator.of(context).pop(XFile(_capturedFile!.path));
+                        }
+                      });
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );

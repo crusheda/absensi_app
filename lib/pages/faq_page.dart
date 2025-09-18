@@ -21,9 +21,17 @@ class _FaqPageState extends State<FaqPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text("Frequently Asked Questions"),
+      navigationBar: CupertinoNavigationBar(
+        middle: Text(
+          "Frequently Asked Questions",
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w900,
+            color: isDark ? CupertinoColors.systemGrey : CupertinoColors.black,
+          ),
+        ),
       ),
       child: Stack(
         children: [
@@ -75,7 +83,9 @@ class _FaqPageState extends State<FaqPage> {
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.9),
+                        color: isDark
+                            ? CupertinoColors.secondaryLabel
+                            : CupertinoColors.white,
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
@@ -91,10 +101,12 @@ class _FaqPageState extends State<FaqPage> {
                         ),
                         title: Text(
                           faq['question'] ?? '-',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
+                            fontWeight: FontWeight.w900,
+                            color: isDark
+                                ? CupertinoColors.systemGrey4
+                                : Colors.black87,
                           ),
                         ),
                         childrenPadding: const EdgeInsets.all(16),
@@ -108,24 +120,28 @@ class _FaqPageState extends State<FaqPage> {
                               children: [
                                 // ✅ Answer
                                 Text(
-                                  faq['answer'] ?? '',
+                                  (faq['answer'] ?? '').replaceAll("\\n", "\n"),
                                   textAlign: TextAlign.justify,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 14,
-                                    color: Colors.black87,
+                                    color: isDark
+                                        ? CupertinoColors.systemGrey4
+                                        : Colors.black87,
                                   ),
                                 ),
                                 // ✅ Extra (Keterangan)
                                 if (faq['extra'] != null &&
                                     faq['extra'].toString().isNotEmpty) ...[
                                   const SizedBox(height: 12),
-                                  const Text(
+                                  Text(
                                     "Nb.",
                                     style: TextStyle(
                                       fontSize: 13,
-                                      fontWeight: FontWeight.bold,
+                                      fontWeight: FontWeight.w900,
                                       fontStyle: FontStyle.italic,
-                                      color: Colors.black87,
+                                      color: isDark
+                                          ? CupertinoColors.systemGrey4
+                                          : Colors.black87,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -177,9 +193,11 @@ class _FaqPageState extends State<FaqPage> {
                                     Text(
                                       faq['extra'],
                                       textAlign: TextAlign.justify,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 13,
-                                        color: Colors.black87,
+                                        color: isDark
+                                            ? CupertinoColors.systemGrey4
+                                            : Colors.black87,
                                       ),
                                     ),
                                 ],
