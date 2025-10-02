@@ -87,7 +87,7 @@ class _FullscreenImageViewerState extends State<FullscreenImageViewer> {
               style: TextStyle(
                 decoration: TextDecoration.none,
                 color: isDark ? CupertinoColors.white : CupertinoColors.black,
-                fontSize: 20,
+                fontSize: 16,
                 fontFamily: 'Poppins',
               ),
             ),

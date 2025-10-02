@@ -840,6 +840,9 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
       return;
     }
 
+    bool isCompleted = false; // menandai apakah absensi sudah selesai
+
+    // tampilkan loading
     showCupertinoDialog(
       context: context,
       barrierDismissible: false,
@@ -851,6 +854,44 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
         ),
       ),
     );
+
+    // timeout 30 detik
+    Future.delayed(const Duration(seconds: 30), () {
+      if (!isCompleted && mounted) {
+        Navigator.pop(context); // tutup loading
+        flutterLocalNotificationsPlugin.show(
+          0,
+          'Absensi Gagal!',
+          'Proses absensi lebih dari 30 detik. Silakan periksa koneksi jaringan Anda dan coba lagi.',
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'notif_absensi',
+              'Notifikasi E-Absensi',
+              channelDescription: 'Timeout absensi',
+              importance: Importance.max,
+              priority: Priority.high,
+            ),
+          ),
+        );
+        // Opsional: tampilkan dialog ulang
+        showCupertinoDialog(
+          context: context,
+          builder: (_) => CupertinoAlertDialog(
+            title: const Text("Gagal"),
+            content: const Text(
+              "Proses absensi gagal! Pengiriman data Absensi memakan waktu terlalu lama. Silakan periksa koneksi jaringan Anda dan coba mengulangi Absensi kembali.",
+            ),
+            actions: [
+              CupertinoDialogAction(
+                isDefaultAction: true,
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Tutup"),
+              ),
+            ],
+          ),
+        );
+      }
+    });
 
     try {
       final result = await ApiService.kirimAbsensi(
@@ -865,7 +906,8 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
       );
 
       if (!mounted) return;
-      Navigator.pop(context);
+      Navigator.pop(context); // tutup loading
+      isCompleted = true; // tandai sudah selesai
 
       if (result['code'] == 200) {
         await flutterLocalNotificationsPlugin.show(
@@ -899,22 +941,78 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
         );
         showCupertinoDialog(
           context: context,
-          builder: (_) => CupertinoAlertDialog(
-            title: Text('Gagal Absensi - Code ${result['code']}'),
-            content: Text(result['message']),
-            actions: [
-              CupertinoDialogAction(
-                isDefaultAction: true,
-                child: const Text('Tutup'),
-                onPressed: () => Navigator.pop(context),
+          builder: (_) => Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 40),
+              decoration: BoxDecoration(
+                color: CupertinoColors.systemRed.withOpacity(0.85),
+                borderRadius: BorderRadius.circular(16),
               ),
-            ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Text(
+                      'Gagal Absensi - Code ${result['code']}',
+                      style: const TextStyle(
+                        color: CupertinoColors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        decoration: TextDecoration.none,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Text(
+                      result['message'],
+                      style: const TextStyle(
+                        color: CupertinoColors.white,
+                        fontSize: 14,
+                        decoration: TextDecoration.none,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const Divider(height: 1, color: CupertinoColors.white),
+                  // Tombol Tutup dengan border radius bottom
+                  ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
+                    ),
+                    child: CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      color: CupertinoColors.white.withOpacity(
+                        0.2,
+                      ), // opsional, bisa lebih transparan
+                      onPressed: () => Navigator.pop(context),
+                      child: Container(
+                        width: double.infinity,
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: const Text(
+                          'Tutup',
+                          style: TextStyle(
+                            color: CupertinoColors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       }
     } catch (e) {
       if (!mounted) return;
-      Navigator.pop(context);
+      Navigator.pop(context); // tutup loading
+      isCompleted = true;
 
       showCupertinoDialog(
         context: context,
@@ -1182,7 +1280,10 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                                             radius: 10,
                                           ),
                                           SizedBox(width: 8),
-                                          Text("Sedang mendeteksi lokasi..."),
+                                          Text(
+                                            "Sedang mendeteksi lokasi...",
+                                            style: TextStyle(fontSize: 13),
+                                          ),
                                         ],
                                       )
                                     : _izinLokasiDitolak
@@ -1190,6 +1291,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                                         "Perizinan lokasi ditolak",
                                         style: TextStyle(
                                           color: CupertinoColors.systemRed,
+                                          fontSize: 13,
                                         ),
                                       )
                                     : Text(() {
@@ -1202,7 +1304,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                                         } else {
                                           return "Anda berada ${distance.toStringAsFixed(0)} m di Luar Radius RS";
                                         }
-                                      }(), style: const TextStyle(fontSize: 14)),
+                                      }(), style: TextStyle(fontSize: 13)),
                               ),
                             ],
                           ),
@@ -1215,6 +1317,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                                 _position != null
                                     ? "Akurasi GPS sejauh ${_position!.accuracy.toStringAsFixed(0)} m${_isMocked ? " ⚠️ Fake GPS" : ""}"
                                     : "-",
+                                style: TextStyle(fontSize: 13),
                               ),
                             ],
                           ),
@@ -1236,7 +1339,10 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                                   Text(jadwalJam),
                                   Text(
                                     jadwalKeterangan,
-                                    style: TextStyle(color: Colors.grey),
+                                    style: TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 13,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1245,14 +1351,14 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                                 children: [
                                   Text(
                                     _currentTime.split('\n').first,
-                                    style: const TextStyle(fontSize: 12),
+                                    style: const TextStyle(fontSize: 13),
                                   ),
                                   const SizedBox(height: 7),
                                   Text(
                                     _currentTime.split('\n').last,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 25,
+                                      fontSize: 20,
                                     ),
                                   ),
                                 ],
@@ -1305,7 +1411,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                                 "PULANG",
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 15,
+                                  fontSize: 14,
                                 ),
                               ),
                             ),
@@ -1332,7 +1438,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                                                       ? CupertinoColors.white
                                                       : CupertinoColors
                                                             .secondaryLabel,
-                                                  fontSize: 20,
+                                                  fontSize: 16,
                                                 ),
                                               ),
                                               actions: [
@@ -1343,7 +1449,12 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                                                       AbsensiJenis.ijin,
                                                     );
                                                   },
-                                                  child: const Text("Ijin"),
+                                                  child: const Text(
+                                                    "Ijin",
+                                                    style: TextStyle(
+                                                      fontSize: 19,
+                                                    ),
+                                                  ),
                                                 ),
                                                 CupertinoActionSheetAction(
                                                   onPressed: () {
@@ -1354,6 +1465,9 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                                                   },
                                                   child: const Text(
                                                     "Dinas Luar",
+                                                    style: TextStyle(
+                                                      fontSize: 19,
+                                                    ),
                                                   ),
                                                 ),
                                               ],
@@ -1372,7 +1486,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                                 "LAINNYA",
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 15,
+                                  fontSize: 14,
                                 ),
                               ),
                             ),
@@ -1395,7 +1509,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                                 "BERANGKAT",
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 15,
+                                  fontSize: 14,
                                 ),
                               ),
                             ),

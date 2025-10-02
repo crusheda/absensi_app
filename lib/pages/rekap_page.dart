@@ -224,7 +224,7 @@ class _RekapPageState extends State<RekapPage> {
             Text(
               title,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 12,
                 color: isDark
                     ? CupertinoColors.systemGrey4
                     : CupertinoColors.black,
@@ -269,7 +269,11 @@ class _RekapPageState extends State<RekapPage> {
                       ? CupertinoColors.white
                       : CupertinoColors.darkBackgroundGray,
                 ),
-                child: Text('Pilih Rentang Waktu', textAlign: TextAlign.center),
+                child: Text(
+                  'Pilih Rentang Waktu',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14),
+                ),
               ),
               actions: [
                 ...filterOptions.entries.map((entry) {
@@ -284,7 +288,7 @@ class _RekapPageState extends State<RekapPage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(entry.value, style: TextStyle()),
+                        Text(entry.value, style: TextStyle(fontSize: 13)),
                         if (selectedFilter == entry.key)
                           const Icon(CupertinoIcons.check_mark, size: 18),
                       ],
@@ -295,7 +299,7 @@ class _RekapPageState extends State<RekapPage> {
                 CupertinoActionSheetAction(
                   onPressed: () => Navigator.pop(context),
                   isDefaultAction: true,
-                  child: const Text('Batal'),
+                  child: Text('Batal', style: TextStyle(fontSize: 14)),
                 ),
               ],
             ),
@@ -312,7 +316,7 @@ class _RekapPageState extends State<RekapPage> {
                   color: CupertinoTheme.brightnessOf(context) == Brightness.dark
                       ? CupertinoColors.systemGrey2
                       : CupertinoColors.systemGrey,
-                  fontSize: 15,
+                  fontSize: 13,
                 ),
               ),
               const Icon(
@@ -410,7 +414,7 @@ class _RekapPageState extends State<RekapPage> {
                       Text(
                         "Data diurutkan dari absensi terakhir",
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 12,
                           color: CupertinoColors.systemGrey,
                         ),
                       ),
@@ -603,6 +607,7 @@ class _RekapPageState extends State<RekapPage> {
                                                   style: TextStyle(
                                                     color: iconColor,
                                                     fontWeight: FontWeight.w500,
+                                                    fontSize: 14,
                                                   ),
                                                 ),
                                                 Text(

@@ -28,44 +28,62 @@ class _JadwalPageState extends State<JadwalPage> {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
-  // Helper mapping icon
-  IconData? getIconData(String? name) {
-    switch (name) {
-      case 'check_mark_circled_solid':
-        return CupertinoIcons.check_mark_circled_solid;
-      case 'check_mark_circled':
-        return CupertinoIcons.check_mark_circled;
-      case 'minus_circle_fill':
-        return CupertinoIcons.minus_circle_fill;
-      case 'clear_circled':
-        return CupertinoIcons.clear_circled; // fallback, solid tidak ada
-      default:
-        return CupertinoIcons.question_circle; // fallback kalau tidak cocok
-    }
+  Color hexToColor(String hex) {
+    hex = hex.replaceAll("#", "");
+    return Color(int.parse("FF$hex", radix: 16)); // ✅ pakai radix
   }
 
-  // Helper mapping color
-  Color? getColor(String? name) {
-    switch (name) {
-      case 'activeGreen':
-        return CupertinoColors.activeGreen;
-      case 'activeBlue':
-        return CupertinoColors.activeBlue;
-      case 'systemGrey2':
-        return CupertinoColors.systemGrey2;
-      case 'systemOrange':
-        return CupertinoColors.systemOrange;
-      case 'systemPink':
-        return CupertinoColors.systemPink;
-      case 'systemRed':
-        return CupertinoColors.systemRed;
-      case 'systemTeal':
-        return CupertinoColors.systemTeal;
-      case 'systemIndigo':
-        return CupertinoColors.systemIndigo;
-      default:
-        return CupertinoColors.systemGrey; // fallback kalau nama tidak cocok
-    }
+  Color getColor(String kodeShift) {
+    final hex = colorMap[kodeShift] ?? "#9E9E9E"; // default abu2 kalau null
+    return hexToColor(hex);
+  }
+
+  Widget buildShiftCircle(String? status, Map<String, String> colorMap) {
+    if (status == null || status.isEmpty) return SizedBox.shrink();
+
+    final colorHex = colorMap[status] ?? "#9E9E9E";
+
+    return Container(
+      constraints: const BoxConstraints(minWidth: 12, minHeight: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: hexToColor(colorHex),
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          status,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget buildLegendCircle(String code, Color? color) {
+    return FittedBox(
+      child: Container(
+        width: 20,
+        height: 20,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: color ?? CupertinoColors.systemGrey,
+          shape: BoxShape.circle,
+        ),
+        child: Text(
+          code,
+          style: const TextStyle(
+            fontSize: 8,
+            fontWeight: FontWeight.bold,
+            color: CupertinoColors.white,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -82,7 +100,7 @@ class _JadwalPageState extends State<JadwalPage> {
 
     final bulan = selectedDate.month.toString().padLeft(2, '0');
     final tahun = selectedDate.year;
-    final url = '${ApiService.baseUrl}/jadwal/${widget.id_user}/$bulan/$tahun';
+    final url = '${ApiService.baseUrl}/jadwal2/${widget.id_user}/$bulan/$tahun';
 
     try {
       final response = await http.get(Uri.parse(url));
@@ -96,11 +114,13 @@ class _JadwalPageState extends State<JadwalPage> {
           });
         } else {
           setState(() {
-            jadwalData = Map<String, String>.from(data['jadwal']);
-            refShift = Map<String, String>.from(data['ref_shift']);
-            iconMap = Map<String, String>.from(data['icon']);
-            colorMap = Map<String, String>.from(data['color']);
-            flowData = Map<String, dynamic>.from(data['flow']);
+            jadwalData = Map<String, String>.from(data['jadwal'] ?? {});
+            refShift = Map<String, String>.from(data['ref_shift'] ?? {});
+            iconMap = Map<String, String>.from(
+              data['icon'] ?? {},
+            ); // karena key icon tidak ada
+            colorMap = Map<String, String>.from(data['color'] ?? {});
+            flowData = Map<String, dynamic>.from(data['flow'] ?? {});
             jadwalKosong = false; // Ada data, bukan kosong
           });
         }
@@ -126,8 +146,8 @@ class _JadwalPageState extends State<JadwalPage> {
     showCupertinoDialog(
       context: context,
       builder: (_) => CupertinoAlertDialog(
-        title: const Text("Detail Jadwal"),
-        content: Text("Keterangan: ${refShift[status] ?? status}"),
+        title: const Text("Keterangan Jadwal"),
+        content: Text("${refShift[status] ?? status}"),
         actions: [
           CupertinoDialogAction(
             isDefaultAction: true,
@@ -143,55 +163,48 @@ class _JadwalPageState extends State<JadwalPage> {
     final key = date.day.toString().padLeft(2, '0');
     final status = isCurrentMonth ? jadwalData[key] : null;
     final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
-    Icon? icon;
 
-    if (status != null) {
-      final iconName = iconMap[status];
-      final colorName = colorMap[status];
-
-      final iconData = getIconData(iconName);
-      final iconColor = getColor(colorName);
-
-      if (iconData != null && iconColor != null) {
-        icon = Icon(iconData, color: iconColor, size: 12);
-      }
+    Widget? shiftCircle;
+    if (status != null && status.isNotEmpty) {
+      shiftCircle = buildShiftCircle(status, colorMap);
     }
 
     return GestureDetector(
       onTap: status != null ? () => _showDetail(status) : null,
       child: Container(
-        constraints: const BoxConstraints(minHeight: 50),
         decoration: BoxDecoration(
           color: isDark
               ? CupertinoColors.secondaryLabel
               : CupertinoColors.white,
           borderRadius: BorderRadius.circular(8),
           border: isToday
-              ? Border.all(
-                  color: CupertinoColors.activeBlue, // 👈 tanda khusus hari ini
-                  width: 2,
-                )
+              ? Border.all(color: CupertinoColors.activeBlue, width: 2)
               : null,
         ),
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              '${date.day}',
-              style: TextStyle(
-                fontSize: 12,
-                color: isDark
-                    ? (isCurrentMonth
-                          ? CupertinoColors.white
-                          : CupertinoColors.systemGrey)
-                    : (isCurrentMonth
-                          ? CupertinoColors.black
-                          : CupertinoColors.systemGrey),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                '${date.day}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark
+                      ? (isCurrentMonth
+                            ? CupertinoColors.white
+                            : CupertinoColors.systemGrey)
+                      : (isCurrentMonth
+                            ? CupertinoColors.black
+                            : CupertinoColors.systemGrey),
+                ),
               ),
             ),
-            const SizedBox(height: 2),
-            if (icon != null) icon,
+            if (shiftCircle != null) ...[
+              const SizedBox(height: 2),
+              Flexible(child: shiftCircle),
+            ],
           ],
         ),
       ),
@@ -358,53 +371,67 @@ class _JadwalPageState extends State<JadwalPage> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Kiri
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: leftItems.map((entry) {
                         final code = entry.key;
                         final label = entry.value;
-                        final iconData = getIconData(iconMap[code]);
-                        final iconColor = getColor(colorMap[code]);
+                        final iconColor = getColor(code);
 
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: Row(
                             children: [
-                              Icon(
-                                iconData ?? CupertinoIcons.question_circle,
-                                size: 14,
-                                color: iconColor ?? CupertinoColors.systemGrey,
-                              ),
+                              buildLegendCircle(code, iconColor),
                               const SizedBox(width: 4),
-                              Flexible(child: Text(label)),
+                              Flexible(
+                                child: Text(
+                                  label,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark
+                                        ? CupertinoColors.white
+                                        : CupertinoColors.black,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         );
                       }).toList(),
                     ),
                   ),
+
                   const SizedBox(width: 16),
+
+                  // Kanan
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: rightItems.map((entry) {
                         final code = entry.key;
                         final label = entry.value;
-                        final iconData = getIconData(iconMap[code]);
-                        final iconColor = getColor(colorMap[code]);
+                        final iconColor = getColor(code);
 
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: Row(
                             children: [
-                              Icon(
-                                iconData ?? CupertinoIcons.question_circle,
-                                size: 14,
-                                color: iconColor ?? CupertinoColors.systemGrey,
-                              ),
+                              buildLegendCircle(code, iconColor),
                               const SizedBox(width: 4),
-                              Flexible(child: Text(label)),
+                              Flexible(
+                                child: Text(
+                                  label,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark
+                                        ? CupertinoColors.white
+                                        : CupertinoColors.black,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         );
@@ -465,7 +492,7 @@ class _JadwalPageState extends State<JadwalPage> {
                           "Daftar Staf (Diurutkan sesuai Abjad) : ",
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 13,
+                            fontSize: 12,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -474,7 +501,7 @@ class _JadwalPageState extends State<JadwalPage> {
                             padding: const EdgeInsets.only(left: 8, bottom: 2),
                             child: Text(
                               "- $staf",
-                              style: const TextStyle(fontSize: 13),
+                              style: TextStyle(fontSize: 12),
                             ),
                           ),
                         ),
@@ -491,9 +518,9 @@ class _JadwalPageState extends State<JadwalPage> {
                           flex: 3,
                           child: Text(
                             "$key",
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 13,
+                              fontSize: 12,
                             ),
                           ),
                         ),
@@ -501,7 +528,7 @@ class _JadwalPageState extends State<JadwalPage> {
                           flex: 7,
                           child: Text(
                             ": $value",
-                            style: const TextStyle(fontSize: 13),
+                            style: TextStyle(fontSize: 12),
                           ),
                         ),
                       ],
@@ -704,6 +731,7 @@ class _JadwalPageState extends State<JadwalPage> {
                                 Text(
                                   "Ubah Bulan :",
                                   style: TextStyle(
+                                    fontSize: 14,
                                     color: isDark
                                         ? CupertinoColors.white
                                         : CupertinoColors.black,
@@ -713,6 +741,7 @@ class _JadwalPageState extends State<JadwalPage> {
                                 Text(
                                   formatter.format(selectedDate),
                                   style: TextStyle(
+                                    fontSize: 14,
                                     color: isDark
                                         ? CupertinoColors.white
                                         : CupertinoColors.black,

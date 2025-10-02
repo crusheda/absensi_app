@@ -310,13 +310,16 @@ class _DashboardPageState extends State<DashboardPage> {
                       children: [
                         const Text(
                           "Selamat datang kembali,",
-                          style: TextStyle(color: CupertinoColors.systemGrey),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: CupertinoColors.systemGrey,
+                          ),
                         ),
                         FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(
                             '${widget.name} 👋',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
@@ -447,7 +450,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             "Jadwal Hari Ini",
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 18,
+                              fontSize: 15,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -487,7 +490,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           ).format(DateTime.now()),
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 14,
+                            fontSize: 12,
                           ),
                         ),
                       ),
@@ -498,7 +501,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           _currentTime,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 14,
+                            fontSize: 12,
                           ),
                         ),
                       ),
@@ -562,7 +565,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                     _buildSquareStat(
                       context,
-                      "Ijin",
+                      "Ijin/DL",
                       isRetrying
                           ? const CupertinoActivityIndicator(radius: 8)
                           : Text(
@@ -620,7 +623,8 @@ class _DashboardPageState extends State<DashboardPage> {
                                 children: [
                                   Text(
                                     "Jadwal ${bulanToNama(dashboard?.jadwal?.bulan)} ${dashboard?.jadwal?.tahun}",
-                                    style: const TextStyle(
+                                    style: TextStyle(
+                                      fontSize: 13,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -628,7 +632,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                   Text(
                                     "Diperbarui oleh:",
                                     style: TextStyle(
-                                      fontSize: 11,
+                                      fontSize: 10,
                                       color: CupertinoColors.systemGrey,
                                     ),
                                   ),
@@ -636,7 +640,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                   Text(
                                     "${dashboard?.jadwal?.namaPegawai} (Admin Jadwal)",
                                     style: TextStyle(
-                                      fontSize: 11,
+                                      fontSize: 9,
                                       color: CupertinoColors.systemGrey,
                                     ),
                                   ),
@@ -646,7 +650,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                       dashboard?.jadwal?.updatedAt,
                                     ),
                                     style: TextStyle(
-                                      fontSize: 11,
+                                      fontSize: 9,
                                       color: CupertinoColors.systemGrey,
                                     ),
                                   ),
@@ -664,7 +668,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               child: const Text(
                                 "LIHAT",
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 10,
                                   color: Colors.white,
                                 ),
                               ),
@@ -781,7 +785,7 @@ class _DashboardPageState extends State<DashboardPage> {
         aspectRatio: 1,
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
             color: isDark
                 ? CupertinoColors.secondaryLabel
@@ -844,7 +848,7 @@ class _DashboardPageState extends State<DashboardPage> {
           ],
         ),
         child: CupertinoButton(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           onPressed: onTap,
           child: Row(
             children: [
@@ -854,7 +858,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 child: Text(
                   title,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 11,
                     color: isDark
                         ? CupertinoColors.systemGrey4
                         : const Color.fromARGB(255, 5, 5, 5),
