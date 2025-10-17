@@ -17,7 +17,9 @@ class JadwalPage extends StatefulWidget {
 class _JadwalPageState extends State<JadwalPage> {
   DateTime selectedDate = DateTime.now();
   Map<String, String> jadwalData = {};
+  Map<String, dynamic> rekanKerja = {};
   Map<String, String> refShift = {};
+  Map<String, String> refJam = {};
   Map<String, String> iconMap = {};
   Map<String, String> colorMap = {};
   Map<String, dynamic> flowData = {};
@@ -115,7 +117,9 @@ class _JadwalPageState extends State<JadwalPage> {
         } else {
           setState(() {
             jadwalData = Map<String, String>.from(data['jadwal'] ?? {});
+            rekanKerja = Map<String, dynamic>.from(data['rekan_kerja'] ?? {});
             refShift = Map<String, String>.from(data['ref_shift'] ?? {});
+            refJam = Map<String, String>.from(data['ref_jam'] ?? {});
             iconMap = Map<String, String>.from(
               data['icon'] ?? {},
             ); // karena key icon tidak ada
@@ -142,16 +146,69 @@ class _JadwalPageState extends State<JadwalPage> {
     }
   }
 
-  void _showDetail(String status) {
+  void _showDetail(String tanggal, String status) {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+    final dynamic rawRekan = rekanKerja[tanggal];
+    List<dynamic> rekan = [];
+
+    if (rawRekan is List) {
+      rekan = rawRekan;
+    } else if (rawRekan is String && rawRekan.isNotEmpty) {
+      rekan = [rawRekan];
+    }
+
+    final namaRekan = rekan.isNotEmpty ? rekan.join(', ') : '-';
+
     showCupertinoDialog(
       context: context,
       builder: (_) => CupertinoAlertDialog(
-        title: const Text("Keterangan Jadwal"),
-        content: Text("${refShift[status] ?? status}"),
+        title: Text(
+          "Detail Shift",
+          style: TextStyle(
+            fontSize: 16,
+            color: isDark ? CupertinoColors.white : CupertinoColors.black,
+          ),
+        ),
+        content: Align(
+          alignment: Alignment.centerLeft, // 🔹 buat rata kiri semua
+          child: Padding(
+            padding: const EdgeInsets.only(
+              top: 4.0,
+            ), // sedikit jarak dari title
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "Shift   : ${refShift[status] ?? status}",
+                  textAlign: TextAlign.left,
+                ),
+                Text(
+                  "Jam   : ${refJam[status] != null && refJam[status]!.isNotEmpty ? refJam[status]! + " WIB" : "-"}",
+                  textAlign: TextAlign.left,
+                ),
+                // Hanya tampil jika refJam[status] ada isinya
+                if (refJam[status] != null && refJam[status]!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    "Rekan Kerja Shift $status :\n$namaRekan",
+                    textAlign: TextAlign.left,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
         actions: [
           CupertinoDialogAction(
             isDefaultAction: true,
-            child: const Text("Tutup"),
+            child: Text(
+              "Tutup",
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? CupertinoColors.white : CupertinoColors.black,
+              ),
+            ),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
@@ -170,7 +227,7 @@ class _JadwalPageState extends State<JadwalPage> {
     }
 
     return GestureDetector(
-      onTap: status != null ? () => _showDetail(status) : null,
+      onTap: status != null ? () => _showDetail(key, status) : null,
       child: Container(
         decoration: BoxDecoration(
           color: isDark
@@ -329,6 +386,14 @@ class _JadwalPageState extends State<JadwalPage> {
                       ),
                     )
                     .toList(),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                "Klik Tanggal di atas untuk melihat Detail Shift",
+                style: TextStyle(
+                  fontSize: 10,
+                  color: isDark ? CupertinoColors.white : CupertinoColors.black,
+                ),
               ),
             ],
           ),

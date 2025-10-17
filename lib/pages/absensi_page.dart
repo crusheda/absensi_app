@@ -1,6 +1,7 @@
 // Final Absensi Page dengan desain kotak seperti pada gambar terakhir
 import 'dart:async';
 import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
@@ -44,6 +45,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
   bool _notifikasiSudahDikirim = false;
   bool _isMocked = false;
   bool _notifikasiFakeGpsSudahDikirim = false;
+  bool _isJaringanDialogVisible = false;
   bool isTombolAktif = false;
   bool _sudahValidasiAwal = false;
   bool _alreadyInitialized = false;
@@ -226,6 +228,10 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
         );
       } catch (e) {
         print('Gagal memvalidasi tombol absensi: $e');
+        // if (e.toString().contains('SocketException') ||
+        //     e.toString().contains('TimeoutException')) {
+        //   _showJaringanErrorDialog();
+        // }
       }
     }
 
@@ -266,6 +272,93 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
 
     // Setelah semua proses selesai
     _sedangAmbilLokasi = false;
+  }
+
+  void _showJaringanErrorDialog() {
+    if (_isJaringanDialogVisible) return; // 🔒 cegah dialog ganda
+    _isJaringanDialogVisible = true;
+
+    showCupertinoDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 40),
+          decoration: BoxDecoration(
+            color: CupertinoColors.systemRed.withOpacity(0.9),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text(
+                  'Jaringan Tidak Stabil',
+                  style: TextStyle(
+                    color: CupertinoColors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    decoration: TextDecoration.none,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Text(
+                  'Koneksi ke server gagal.\nPastikan Wi-Fi atau data seluler kamu aktif dan stabil.',
+                  style: TextStyle(
+                    color: CupertinoColors.white,
+                    fontSize: 14,
+                    decoration: TextDecoration.none,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const Divider(height: 1, color: CupertinoColors.white),
+              ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(16),
+                  bottomRight: Radius.circular(16),
+                ),
+                child: CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  color: CupertinoColors.white.withOpacity(0.2),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _isJaringanDialogVisible =
+                        false; // ✅ reset flag setelah ditutup
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: const Text(
+                      'Tutup',
+                      style: TextStyle(
+                        color: CupertinoColors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).then((_) {
+      _isJaringanDialogVisible =
+          false; // ✅ pastikan flag reset walau ditutup paksa
+    });
+    // 🕒 Tutup otomatis setelah 5 detik
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted && _isJaringanDialogVisible) {
+        Navigator.of(context, rootNavigator: true).pop();
+        _isJaringanDialogVisible = false;
+      }
+    });
   }
 
   @override
@@ -413,20 +506,29 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
       if (_isMocked) {
         _tampilkanNotifikasiFakeGps();
       }
+
+      // 🔁 Ambil lokasi kantor dari backend
+      await _ambilLokasiKantor();
+
+      if (lokasiAbsensi != null) {
+        _sudahValidasiAwal = false;
+        _startLocationStream();
+      }
+    } on SocketException catch (_) {
+      print('Gagal memvalidasi tombol absensi: _refreshLocation');
+      // _showJaringanErrorDialog();
+    } on http.ClientException catch (_) {
+      print('Gagal memvalidasi tombol absensi: _refreshLocation');
+      // _showJaringanErrorDialog();
     } catch (e) {
       print("❌ Gagal refresh lokasi: $e");
+      if (e.toString().contains('Connection refused') ||
+          e.toString().contains('Failed host lookup')) {
+        // _showJaringanErrorDialog();
+      }
+    } finally {
+      setState(() => _isRefreshingLocation = false);
     }
-
-    await _ambilLokasiKantor();
-
-    if (lokasiAbsensi != null) {
-      _sudahValidasiAwal = false;
-      _startLocationStream();
-    }
-
-    // await _cekValidasiTombol();
-
-    setState(() => _isRefreshingLocation = false);
   }
 
   Future<PermissionStatus> _requestNotificationPermission() async {
@@ -570,6 +672,21 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
       });
     } catch (e) {
       print('Gagal memvalidasi tombol absensi: $e');
+      // Jika terjadi error koneksi (connection refused, timeout, dll)
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('Connection refused') ||
+          e.toString().contains('TimeoutException')) {
+        // 🔴 Matikan semua tombol
+        if (mounted) {
+          setState(() {
+            aktifBerangkat = false;
+            aktifPulang = false;
+            aktifIjin = false;
+          });
+        }
+        // 🔴 Tampilkan dialog jaringan tidak stabil
+        _showJaringanErrorDialog();
+      }
     }
   }
 
@@ -912,7 +1029,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
       if (result['code'] == 200) {
         await flutterLocalNotificationsPlugin.show(
           0,
-          'Yeayy!! Kamu Hebat!',
+          'Yeayy!! Kamu Berhasil!',
           result['message'],
           const NotificationDetails(
             android: AndroidNotificationDetails(
@@ -924,7 +1041,91 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
             ),
           ),
         );
+      } else if (result['code'] == 401) {
+        // ⚠️ KHUSUS: KONEKSI DITOLAK ATAU TOKEN TIDAK VALID
+        await flutterLocalNotificationsPlugin.show(
+          0,
+          'Maaf, Gagal Terhubung ke Server!',
+          'Tidak dapat mengirim data absensi. Pastikan koneksi jaringan aktif dan stabil lalu silakan mengulangi Absensi kembali.',
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'notif_absensi',
+              'Notifikasi E-Absensi',
+              channelDescription: 'Koneksi ditolak atau token tidak valid',
+              importance: Importance.max,
+              priority: Priority.high,
+            ),
+          ),
+        );
+        showCupertinoDialog(
+          context: context,
+          builder: (_) => Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 40),
+              decoration: BoxDecoration(
+                color: CupertinoColors.systemRed.withOpacity(0.85),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Text(
+                      'Gagal Absensi!\nKoneksi Jaringan Ditolak',
+                      style: const TextStyle(
+                        color: CupertinoColors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        decoration: TextDecoration.none,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Text(
+                      "Tidak dapat mengirim data absensi karena koneksi ke server gagal atau jaringan tidak stabil.\n"
+                      "Silakan periksa koneksi jaringan Anda dan ulangi Absensi sekali lagi.",
+                      style: const TextStyle(
+                        color: CupertinoColors.white,
+                        fontSize: 14,
+                        decoration: TextDecoration.none,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const Divider(height: 1, color: CupertinoColors.white),
+                  ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
+                    ),
+                    child: CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      color: CupertinoColors.white.withOpacity(0.2),
+                      onPressed: () => Navigator.pop(context),
+                      child: Container(
+                        width: double.infinity,
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: const Text(
+                          'Ulangi Sekali Lagi',
+                          style: TextStyle(
+                            color: CupertinoColors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
       } else {
+        // 🔴 ERROR LAIN (GAGAL ABSENSI)
         await flutterLocalNotificationsPlugin.show(
           0,
           'Ahh Maaf!! Kode Error ${result['code']}!',
@@ -939,6 +1140,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
             ),
           ),
         );
+
         showCupertinoDialog(
           context: context,
           builder: (_) => Center(
@@ -977,7 +1179,6 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                     ),
                   ),
                   const Divider(height: 1, color: CupertinoColors.white),
-                  // Tombol Tutup dengan border radius bottom
                   ClipRRect(
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(16),
@@ -985,9 +1186,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                     ),
                     child: CupertinoButton(
                       padding: EdgeInsets.zero,
-                      color: CupertinoColors.white.withOpacity(
-                        0.2,
-                      ), // opsional, bisa lebih transparan
+                      color: CupertinoColors.white.withOpacity(0.2),
                       onPressed: () => Navigator.pop(context),
                       child: Container(
                         width: double.infinity,
