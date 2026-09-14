@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace 'com.sakudewa.absensi'
-    compileSdkVersion 36
+    compileSdkVersion 37
     // compileSdkVersion flutter.compileSdkVersion
     // ndkVersion '27.0.12077973'
     ndkVersion '28.1.13356709'
@@ -30,9 +30,9 @@ android {
 
     defaultConfig {
         applicationId 'com.sakudewa.absensi'
-        minSdkVersion 23
+        minSdkVersion flutter.minSdkVersion
         // minSdkVersion flutter.minSdkVersion
-        targetSdkVersion 36
+        targetSdkVersion 37
         // targetSdkVersion flutter.targetSdkVersion
         versionCode flutter.versionCode
         versionName flutter.versionName

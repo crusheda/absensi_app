@@ -65,9 +65,7 @@ class _DashboardPageState extends State<DashboardPage> {
       return '-';
     }
 
-    return DateFormat.MMMM(
-      'id',
-    ).format(DateTime(2025, bulanAngka));
+    return DateFormat.MMMM('id').format(DateTime(2025, bulanAngka));
   }
 
   @override
@@ -78,10 +76,7 @@ class _DashboardPageState extends State<DashboardPage> {
     _updateTime();
     _initFcmToken();
 
-    _timer = Timer.periodic(
-      const Duration(seconds: 1),
-      (_) => _updateTime(),
-    );
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _updateTime());
 
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
@@ -105,8 +100,7 @@ class _DashboardPageState extends State<DashboardPage> {
       loadingProgress = 0;
     });
 
-    final url =
-        '${ApiService.baseUrl}/dashboard/${widget.id_user}';
+    final url = '${ApiService.baseUrl}/dashboard/${widget.id_user}';
 
     try {
       final response = await http
@@ -169,10 +163,10 @@ class _DashboardPageState extends State<DashboardPage> {
     final suffix = now.hour < 12
         ? 'Pagi'
         : now.hour < 15
-            ? 'Siang'
-            : now.hour < 18
-                ? 'Sore'
-                : 'Malam';
+        ? 'Siang'
+        : now.hour < 18
+        ? 'Sore'
+        : 'Malam';
 
     setState(() {
       _currentTime = "$timeStr $suffix";
@@ -187,9 +181,7 @@ class _DashboardPageState extends State<DashboardPage> {
         context: context,
         builder: (ctx) => CupertinoAlertDialog(
           title: const Text("Gagal Memuat Data"),
-          content: const Text(
-            "Periksa koneksi atau hubungi admin.",
-          ),
+          content: const Text("Periksa koneksi atau hubungi admin."),
           actions: [
             CupertinoDialogAction(
               child: const Text("Tutup"),
@@ -213,10 +205,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildNamaShift() {
     if (isRetrying) {
-      return const CupertinoActivityIndicator(
-        radius: 8,
-        color: Colors.white,
-      );
+      return const CupertinoActivityIndicator(radius: 8, color: Colors.white);
     }
 
     if (isError ||
@@ -251,17 +240,12 @@ class _DashboardPageState extends State<DashboardPage> {
       return const SizedBox.shrink();
     }
 
-    if (isError ||
-        dashboard?.shift == null ||
-        dashboard!.shift!.isEmpty) {
+    if (isError || dashboard?.shift == null || dashboard!.shift!.isEmpty) {
       return const Text(
         "Hubungi Admin Jadwal",
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          color: Colors.white70,
-          fontSize: 10,
-        ),
+        style: TextStyle(color: Colors.white70, fontSize: 10),
       );
     }
 
@@ -269,10 +253,7 @@ class _DashboardPageState extends State<DashboardPage> {
       dashboard!.shift!,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: const TextStyle(
-        color: Colors.white70,
-        fontSize: 10,
-      ),
+      style: const TextStyle(color: Colors.white70, fontSize: 10),
     );
   }
 
@@ -284,18 +265,15 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark =
-        CupertinoTheme.brightnessOf(context) == Brightness.dark;
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
 
-    final isFotoAda =
-        widget.fotoProfil.trim().isNotEmpty;
+    final isFotoAda = widget.fotoProfil.trim().isNotEmpty;
 
     final fotoUrl = isFotoAda
         ? '${ApiService.simrsUrl}/storage/${widget.fotoProfil.replaceFirst('public/', '')}'
         : null;
 
-    final fotoUrlAdminJadwal =
-        dashboard?.jadwal?.fotoPegawai;
+    final fotoUrlAdminJadwal = dashboard?.jadwal?.fotoPegawai;
 
     return CupertinoPageScaffold(
       backgroundColor: isDark
@@ -310,14 +288,8 @@ class _DashboardPageState extends State<DashboardPage> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: isDark
-                      ? const [
-                          Color(0xFF0D1117),
-                          Color(0xFF111827),
-                        ]
-                      : const [
-                          Color(0xFFF8FAFF),
-                          Color(0xFFF2F6FB),
-                        ],
+                      ? const [Color(0xFF0D1117), Color(0xFF111827)]
+                      : const [Color(0xFFF8FAFF), Color(0xFFF2F6FB)],
                 ),
               ),
             ),
@@ -326,67 +298,38 @@ class _DashboardPageState extends State<DashboardPage> {
             Positioned(
               top: -110,
               right: -80,
-              child: _blurCircle(
-                const Color(0x443B82F6),
-              ),
+              child: _blurCircle(const Color(0x443B82F6)),
             ),
             Positioned(
               top: 260,
               left: -110,
-              child: _blurCircle(
-                const Color(0x222563EB),
-              ),
+              child: _blurCircle(const Color(0x222563EB)),
             ),
           ],
           SafeArea(
             child: ListView(
               physics: const ClampingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(
-                14,
-                8,
-                14,
-                22,
-              ),
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 22),
               children: [
-                _buildHeader(
-                  isDark,
-                  isFotoAda,
-                  fotoUrl,
-                ),
+                _buildHeader(isDark, isFotoAda, fotoUrl),
                 const SizedBox(height: 11),
                 if (isRetrying) ...[
                   _buildLoadingCard(isDark),
                   const SizedBox(height: 9),
                 ],
-                _buildTodaySchedule(
-                  isDark,
-                ),
+                _buildTodaySchedule(isDark),
                 const SizedBox(height: 12),
-                _buildSectionTitle(
-                  "Ringkasan Absensi",
-                  "Bulan ini",
-                  isDark,
-                ),
+                _buildSectionTitle("Ringkasan Absensi", "Bulan ini", isDark),
                 const SizedBox(height: 7),
                 _buildStatistics(isDark),
                 if (dashboard?.jadwal != null) ...[
                   const SizedBox(height: 12),
-                  _buildAdminSchedule(
-                    isDark,
-                    fotoUrlAdminJadwal,
-                  ),
+                  _buildAdminSchedule(isDark, fotoUrlAdminJadwal),
                 ],
                 const SizedBox(height: 12),
-                _buildSectionTitle(
-                  "Menu Cepat",
-                  null,
-                  isDark,
-                ),
+                _buildSectionTitle("Menu Cepat", null, isDark),
                 const SizedBox(height: 7),
-                _buildQuickActions(
-                  context,
-                  isDark,
-                ),
+                _buildQuickActions(context, isDark),
               ],
             ),
           ),
@@ -395,11 +338,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildHeader(
-    bool isDark,
-    bool isFotoAda,
-    String? fotoUrl,
-  ) {
+  Widget _buildHeader(bool isDark, bool isFotoAda, String? fotoUrl) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -414,9 +353,7 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(
-                  isDark ? 0.20 : 0.06,
-                ),
+                color: Colors.black.withOpacity(isDark ? 0.20 : 0.06),
                 blurRadius: 9,
                 offset: const Offset(0, 3),
               ),
@@ -428,9 +365,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     imageUrl: fotoUrl!,
                     fit: BoxFit.cover,
                     placeholder: (_, __) => Container(
-                      color: isDark
-                          ? Colors.white10
-                          : const Color(0xFFE9EEF5),
+                      color: isDark ? Colors.white10 : const Color(0xFFE9EEF5),
                       child: const Icon(
                         CupertinoIcons.person_fill,
                         size: 19,
@@ -438,16 +373,10 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                     ),
                     errorWidget: (_, __, ___) {
-                      return Image.asset(
-                        'assets/user.png',
-                        fit: BoxFit.cover,
-                      );
+                      return Image.asset('assets/user.png', fit: BoxFit.cover);
                     },
                   )
-                : Image.asset(
-                    'assets/user.png',
-                    fit: BoxFit.cover,
-                  ),
+                : Image.asset('assets/user.png', fit: BoxFit.cover),
           ),
         ),
         const SizedBox(width: 9),
@@ -461,9 +390,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 10,
-                  color: isDark
-                      ? Colors.white54
-                      : const Color(0xFF7B8794),
+                  color: isDark ? Colors.white54 : const Color(0xFF7B8794),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -474,9 +401,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 18,
-                  color: isDark
-                      ? Colors.white
-                      : const Color(0xFF152238),
+                  color: isDark ? Colors.white : const Color(0xFF152238),
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.3,
                 ),
@@ -490,15 +415,11 @@ class _DashboardPageState extends State<DashboardPage> {
           height: 37,
           padding: const EdgeInsets.all(7),
           decoration: BoxDecoration(
-            color: isDark
-                ? Colors.white.withOpacity(0.06)
-                : Colors.white,
+            color: isDark ? Colors.white.withOpacity(0.06) : Colors.white,
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(
-                  isDark ? 0.12 : 0.05,
-                ),
+                color: Colors.black.withOpacity(isDark ? 0.12 : 0.05),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
@@ -516,33 +437,23 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildLoadingCard(bool isDark) {
     return Container(
       height: 36,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 11,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 11),
       decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withOpacity(0.06)
-            : Colors.white,
+        color: isDark ? Colors.white.withOpacity(0.06) : Colors.white,
         borderRadius: BorderRadius.circular(11),
         border: Border.all(
-          color: isDark
-              ? Colors.white10
-              : const Color(0xFFE6ECF4),
+          color: isDark ? Colors.white10 : const Color(0xFFE6ECF4),
         ),
       ),
       child: Row(
         children: [
-          const CupertinoActivityIndicator(
-            radius: 7,
-          ),
+          const CupertinoActivityIndicator(radius: 7),
           const SizedBox(width: 8),
           Text(
             "Memuat dashboard...",
             style: TextStyle(
               fontSize: 10,
-              color: isDark
-                  ? Colors.white70
-                  : const Color(0xFF667386),
+              color: isDark ? Colors.white70 : const Color(0xFF667386),
             ),
           ),
         ],
@@ -553,28 +464,20 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildTodaySchedule(bool isDark) {
     final now = DateTime.now();
 
-    final tanggal = DateFormat(
-      'EEEE, d MMMM',
-      'id_ID',
-    ).format(now);
+    final tanggal = DateFormat('EEEE, d MMMM', 'id_ID').format(now);
 
-    final currentTime =
-        _currentTime.isNotEmpty
-            ? _currentTime.split(' ').first
-            : '--:--:--';
+    final currentTime = _currentTime.isNotEmpty
+        ? _currentTime.split(' ').first
+        : '--:--:--';
 
-    final currentPeriod =
-        _currentTime.contains(' ')
-            ? _currentTime.split(' ').last
-            : '';
+    final currentPeriod = _currentTime.contains(' ')
+        ? _currentTime.split(' ').last
+        : '';
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(19),
       child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: 12,
-          sigmaY: 12,
-        ),
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.all(14),
@@ -583,14 +486,8 @@ class _DashboardPageState extends State<DashboardPage> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: isDark
-                  ? const [
-                      Color(0xFF17355F),
-                      Color(0xFF142B49),
-                    ]
-                  : const [
-                      Color(0xFF3183ED),
-                      Color(0xFF2563EB),
-                    ],
+                  ? const [Color(0xFF17355F), Color(0xFF142B49)]
+                  : const [Color(0xFF3183ED), Color(0xFF2563EB)],
             ),
             borderRadius: BorderRadius.circular(19),
             boxShadow: [
@@ -660,9 +557,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.10),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.08),
-                  ),
+                  border: Border.all(color: Colors.white.withOpacity(0.08)),
                 ),
                 child: Row(
                   children: [
@@ -727,7 +622,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ),
 
-              const SizedBox(height: 7),
+              const SizedBox(height: 10),
 
               // STATUS
               SizedBox(
@@ -736,38 +631,67 @@ class _DashboardPageState extends State<DashboardPage> {
                   children: [
                     const Icon(
                       CupertinoIcons.person_fill,
-                      color: Colors.white54,
-                      size: 10,
+                      color: Colors.white70,
+                      size: 12,
                     ),
-                    const SizedBox(width: 4),
-                    Flexible(
+
+                    const SizedBox(width: 5),
+
+                    // ============================================================
+                    // STATUS PEGAWAI
+                    // Expanded memastikan mengambil seluruh ruang yang tersedia
+                    // sebelum bagian Aktif.
+                    // ============================================================
+                    Expanded(
                       child: Text(
                         "Status: ${dashboard?.statuspgw?.namaStatus ?? '-'}",
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 8,
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
-                    const Spacer(),
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF4ADE80),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    const Text(
-                      "Aktif",
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 8,
-                        fontWeight: FontWeight.w600,
-                      ),
+
+                    const SizedBox(width: 10),
+
+                    // ============================================================
+                    // STATUS AKTIF - SELALU DI END / PALING KANAN
+                    // ============================================================
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4ADE80),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(
+                                  0xFF4ADE80,
+                                ).withOpacity(0.45),
+                                blurRadius: 5,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(width: 5),
+
+                        const Text(
+                          "Aktif",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -779,20 +703,14 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildSectionTitle(
-    String title,
-    String? trailing,
-    bool isDark,
-  ) {
+  Widget _buildSectionTitle(String title, String? trailing, bool isDark) {
     return Row(
       children: [
         Text(
           title,
           style: TextStyle(
-            fontSize: 13,
-            color: isDark
-                ? Colors.white
-                : const Color(0xFF172033),
+            fontSize: 12,
+            color: isDark ? Colors.white : const Color(0xFF172033),
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -801,10 +719,8 @@ class _DashboardPageState extends State<DashboardPage> {
           Text(
             trailing,
             style: TextStyle(
-              fontSize: 9,
-              color: isDark
-                  ? Colors.white38
-                  : const Color(0xFF8994A5),
+              fontSize: 10,
+              color: isDark ? Colors.white38 : const Color(0xFF8994A5),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -816,8 +732,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildStatistics(bool isDark) {
     return GridView.count(
       shrinkWrap: true,
-      physics:
-          const NeverScrollableScrollPhysics(),
+      physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 4,
       crossAxisSpacing: 7,
       mainAxisSpacing: 7,
@@ -863,75 +778,60 @@ class _DashboardPageState extends State<DashboardPage> {
     bool isDark,
   ) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 4,
-        vertical: 7,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
       decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withOpacity(0.055)
-            : Colors.white,
+        color: isDark ? Colors.white.withOpacity(0.055) : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isDark
-              ? Colors.white10
-              : const Color(0xFFE6ECF4),
+          color: isDark ? Colors.white10 : const Color(0xFFE6ECF4),
         ),
         boxShadow: [
           if (!isDark)
             BoxShadow(
-              color:
-                  Colors.black.withOpacity(0.035),
+              color: Colors.black.withOpacity(0.035),
               blurRadius: 7,
               offset: const Offset(0, 3),
             ),
         ],
       ),
       child: Column(
-        mainAxisAlignment:
-            MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 29,
-            height: 29,
+            width: 30,
+            height: 30,
             decoration: BoxDecoration(
               color: color.withOpacity(0.10),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icon,
-              size: 14,
-              color: color,
-            ),
+            child: Icon(icon, size: 15, color: color),
           ),
-          const SizedBox(height: 4),
+
+          const SizedBox(height: 5),
+
           if (isRetrying)
-            const CupertinoActivityIndicator(
-              radius: 6,
-            )
+            const CupertinoActivityIndicator(radius: 6)
           else
             Text(
               "${value ?? 'x'}x",
               maxLines: 1,
               style: TextStyle(
-                fontSize: 13,
-                color: isDark
-                    ? Colors.white
-                    : const Color(0xFF172033),
+                fontSize: 15,
+                color: isDark ? Colors.white : const Color(0xFF172033),
                 fontWeight: FontWeight.w800,
               ),
             ),
-          const SizedBox(height: 1),
+
+          const SizedBox(height: 2),
+
           Text(
             title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 7,
-              color: isDark
-                  ? Colors.white54
-                  : const Color(0xFF7A8699),
+              fontSize: 10,
+              color: isDark ? Colors.white54 : const Color(0xFF7A8699),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -940,33 +840,23 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildAdminSchedule(
-    bool isDark,
-    String? fotoUrlAdminJadwal,
-  ) {
-    final imageUrl =
-        fotoUrlAdminJadwal != null &&
-                fotoUrlAdminJadwal.isNotEmpty
-            ? "${ApiService.simrsUrl}/storage/${fotoUrlAdminJadwal.replaceFirst('public/', '')}"
-            : null;
+  Widget _buildAdminSchedule(bool isDark, String? fotoUrlAdminJadwal) {
+    final imageUrl = fotoUrlAdminJadwal != null && fotoUrlAdminJadwal.isNotEmpty
+        ? "${ApiService.simrsUrl}/storage/${fotoUrlAdminJadwal.replaceFirst('public/', '')}"
+        : null;
 
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withOpacity(0.055)
-            : Colors.white,
+        color: isDark ? Colors.white.withOpacity(0.055) : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isDark
-              ? Colors.white10
-              : const Color(0xFFE6ECF4),
+          color: isDark ? Colors.white10 : const Color(0xFFE6ECF4),
         ),
         boxShadow: [
           if (!isDark)
             BoxShadow(
-              color:
-                  Colors.black.withOpacity(0.035),
+              color: Colors.black.withOpacity(0.035),
               blurRadius: 9,
               offset: const Offset(0, 3),
             ),
@@ -975,13 +865,11 @@ class _DashboardPageState extends State<DashboardPage> {
       child: Row(
         children: [
           Container(
-            width: 38,
-            height: 38,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isDark
-                  ? Colors.white10
-                  : const Color(0xFFF0F4FA),
+              color: isDark ? Colors.white10 : const Color(0xFFF0F4FA),
             ),
             child: ClipOval(
               child: imageUrl != null
@@ -995,14 +883,16 @@ class _DashboardPageState extends State<DashboardPage> {
                         );
                       },
                     )
-                  : Image.asset(
-                      'assets/user.png',
-                      fit: BoxFit.cover,
-                    ),
+                  : Image.asset('assets/user.png', fit: BoxFit.cover),
             ),
           ),
-          const SizedBox(width: 9),
-          Flexible(
+
+          const SizedBox(width: 10),
+
+          // ============================================================
+          // INFORMASI JADWAL
+          // ============================================================
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1011,68 +901,65 @@ class _DashboardPageState extends State<DashboardPage> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 10,
-                    color: isDark
-                        ? Colors.white
-                        : const Color(0xFF172033),
+                    fontSize: 13,
+                    color: isDark ? Colors.white : const Color(0xFF172033),
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 2),
+
+                const SizedBox(height: 3),
+
                 Text(
                   "Diperbarui oleh ${dashboard?.jadwal?.namaPegawai ?? '-'}",
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 8,
+                    fontSize: 9,
                     color: isDark
-                        ? Colors.white.withOpacity(0.45)
-                        : const Color(0xFF8792A3),
+                        ? Colors.white.withOpacity(0.50)
+                        : const Color(0xFF7A8699),
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 1),
+
+                const SizedBox(height: 2),
+
                 Text(
-                  formatTanggalIndonesia(
-                    dashboard?.jadwal?.updatedAt,
-                  ),
+                  formatTanggalIndonesia(dashboard?.jadwal?.updatedAt),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 7,
+                    fontSize: 9,
                     color: isDark
-                        ? Colors.white.withOpacity(0.30)
-                        : const Color(0xFF9BA5B4),
+                        ? Colors.white.withOpacity(0.34)
+                        : const Color(0xFF929DAC),
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ),
           ),
-          const Spacer(),
-          _buildSmallButton(
-            "LIHAT",
-            const Color(0xFF2563EB),
-            () {
-              MainPageController.changeTab?.call(1);
-            },
-          ),
+
+          const SizedBox(width: 10),
+
+          // ============================================================
+          // TOMBOL LIHAT - SELALU DI PALING KANAN
+          // ============================================================
+          _buildSmallButton("LIHAT", const Color(0xFF2563EB), () {
+            MainPageController.changeTab?.call(1);
+          }),
         ],
       ),
     );
   }
 
-  Widget _buildSmallButton(
-    String title,
-    Color color,
-    VoidCallback onTap,
-  ) {
+  Widget _buildSmallButton(String title, Color color, VoidCallback onTap) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
         height: 30,
-        padding: const EdgeInsets.symmetric(
-          horizontal: 11,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 11),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: color,
@@ -1090,17 +977,12 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildQuickActions(
-    BuildContext context,
-    bool isDark,
-  ) {
+  Widget _buildQuickActions(BuildContext context, bool isDark) {
     return GridView.builder(
       shrinkWrap: true,
-      physics:
-          const NeverScrollableScrollPhysics(),
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: 4,
-      gridDelegate:
-          const SliverGridDelegateWithFixedCrossAxisCount(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 8,
         mainAxisSpacing: 8,
@@ -1115,9 +997,7 @@ class _DashboardPageState extends State<DashboardPage> {
               color: const Color(0xFF4F46E5),
               isDark: isDark,
               onTap: () {
-                MainPageController
-                    .changeTab
-                    ?.call(3);
+                MainPageController.changeTab?.call(3);
               },
             );
 
@@ -1132,8 +1012,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   context,
                   CupertinoPageRoute(
                     builder: (_) => PdfViewPage(
-                      assetPath:
-                          'assets/pdf/tata_cara_eabsensi.pdf',
+                      assetPath: 'assets/pdf/tata_cara_eabsensi.pdf',
                     ),
                   ),
                 );
@@ -1143,17 +1022,13 @@ class _DashboardPageState extends State<DashboardPage> {
           case 2:
             return _buildQuickAction(
               title: "FAQ",
-              icon:
-                  CupertinoIcons.question_circle,
+              icon: CupertinoIcons.question_circle,
               color: const Color(0xFF2563EB),
               isDark: isDark,
               onTap: () {
-                Navigator.of(context).push(
-                  CupertinoPageRoute(
-                    builder: (_) =>
-                        const FaqPage(),
-                  ),
-                );
+                Navigator.of(
+                  context,
+                ).push(CupertinoPageRoute(builder: (_) => const FaqPage()));
               },
             );
 
@@ -1168,21 +1043,16 @@ class _DashboardPageState extends State<DashboardPage> {
                   context: context,
                   builder: (dialogContext) {
                     return CupertinoAlertDialog(
-                      title: const Text(
-                        "Fitur belum tersedia!",
-                      ),
+                      title: const Text("Fitur belum tersedia!"),
                       content: const Text(
                         "Fitur Berita Terkini masih dalam proses pengembangan oleh Developer. Mohon tunggu update berikutnya 😊",
                       ),
                       actions: [
                         CupertinoDialogAction(
                           isDefaultAction: true,
-                          child:
-                              const Text("Tutup"),
+                          child: const Text("Tutup"),
                           onPressed: () {
-                            Navigator.of(
-                              dialogContext,
-                            ).pop();
+                            Navigator.of(dialogContext).pop();
                           },
                         ),
                       ],
@@ -1207,25 +1077,17 @@ class _DashboardPageState extends State<DashboardPage> {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 10,
-          vertical: 8,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: isDark
-              ? Colors.white.withOpacity(0.055)
-              : Colors.white,
+          color: isDark ? Colors.white.withOpacity(0.055) : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isDark
-                ? Colors.white10
-                : const Color(0xFFE6ECF4),
+            color: isDark ? Colors.white10 : const Color(0xFFE6ECF4),
           ),
           boxShadow: [
             if (!isDark)
               BoxShadow(
-                color:
-                    Colors.black.withOpacity(0.035),
+                color: Colors.black.withOpacity(0.035),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
@@ -1238,27 +1100,19 @@ class _DashboardPageState extends State<DashboardPage> {
               height: 32,
               decoration: BoxDecoration(
                 color: color.withOpacity(0.10),
-                borderRadius:
-                    BorderRadius.circular(9),
+                borderRadius: BorderRadius.circular(9),
               ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 16,
-              ),
+              child: Icon(icon, color: color, size: 16),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 title,
                 maxLines: 1,
-                overflow:
-                    TextOverflow.ellipsis,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 10,
-                  color: isDark
-                      ? Colors.white
-                      : const Color(0xFF172033),
+                  color: isDark ? Colors.white : const Color(0xFF172033),
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -1281,18 +1135,10 @@ class _DashboardPageState extends State<DashboardPage> {
     return Container(
       width: 200,
       height: 200,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: 80,
-          sigmaY: 80,
-        ),
-        child: Container(
-          color: Colors.transparent,
-        ),
+        filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+        child: Container(color: Colors.transparent),
       ),
     );
   }
