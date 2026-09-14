@@ -4,6 +4,7 @@ import 'dashboard_page.dart';
 import 'absensi_page.dart';
 import 'rekap_page.dart';
 import 'setting_page.dart';
+import 'main_page_controller.dart';
 
 class MainPage extends StatefulWidget {
   final int id_user;
@@ -31,11 +32,20 @@ class _MainPageState extends State<MainPage> {
   @override
   void initState() {
     super.initState();
+
     MainPageController.changeTab = (int index) {
+      if (!mounted) return;
+
       setState(() {
         currentIndex = index;
       });
     };
+  }
+
+  @override
+  void dispose() {
+    MainPageController.changeTab = null;
+    super.dispose();
   }
 
   @override
@@ -48,9 +58,16 @@ class _MainPageState extends State<MainPage> {
         nip: widget.nip,
         fotoProfil: widget.fotoProfil,
       ),
-      JadwalPage(id_user: widget.id_user),
-      AbsensiPage(id_user: widget.id_user, nip: widget.nip),
-      RekapPage(id_user: widget.id_user),
+      JadwalPage(
+        id_user: widget.id_user,
+      ),
+      AbsensiPage(
+        id_user: widget.id_user,
+        nip: widget.nip,
+      ),
+      RekapPage(
+        id_user: widget.id_user,
+      ),
       SettingPage(
         id_user: widget.id_user,
         name: widget.name,
@@ -61,12 +78,16 @@ class _MainPageState extends State<MainPage> {
     ];
 
     return WillPopScope(
-      onWillPop: () async => false, // Mencegah tombol back
+      onWillPop: () async => false,
       child: Scaffold(
         body: pages[currentIndex],
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: currentIndex,
-          onTap: (i) => setState(() => currentIndex = i),
+          onTap: (i) {
+            setState(() {
+              currentIndex = i;
+            });
+          },
           selectedItemColor: Colors.blue,
           unselectedItemColor: Colors.grey,
           items: const [
@@ -95,8 +116,4 @@ class _MainPageState extends State<MainPage> {
       ),
     );
   }
-}
-
-class MainPageController {
-  static Function(int index)? changeTab;
 }
