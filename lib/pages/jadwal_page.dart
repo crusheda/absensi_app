@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:ui';
+
 import '../services/api_service.dart';
 
 class JadwalPage extends StatefulWidget {
   final int id_user;
+
   const JadwalPage({super.key, required this.id_user});
 
   @override
@@ -16,6 +17,7 @@ class JadwalPage extends StatefulWidget {
 
 class _JadwalPageState extends State<JadwalPage> {
   DateTime selectedDate = DateTime.now();
+
   Map<String, String> jadwalData = {};
   Map<String, dynamic> rekanKerja = {};
   Map<String, String> refShift = {};
@@ -23,6 +25,10 @@ class _JadwalPageState extends State<JadwalPage> {
   Map<String, String> iconMap = {};
   Map<String, String> colorMap = {};
   Map<String, dynamic> flowData = {};
+
+  // Data libur nasional dari API.
+  List<Map<String, dynamic>> refLiburNasional = [];
+
   bool isLoading = true;
   bool jadwalKosong = false;
 
@@ -31,26 +37,53 @@ class _JadwalPageState extends State<JadwalPage> {
   }
 
   Color hexToColor(String hex) {
-    hex = hex.replaceAll("#", "");
-    return Color(int.parse("FF$hex", radix: 16)); // ✅ pakai radix
+    hex = hex.replaceAll('#', '').trim();
+
+    if (hex.length == 6) {
+      return Color(int.parse('FF$hex', radix: 16));
+    }
+
+    if (hex.length == 8) {
+      return Color(int.parse(hex, radix: 16));
+    }
+
+    return CupertinoColors.systemGrey;
   }
 
   Color getColor(String kodeShift) {
-    final hex = colorMap[kodeShift] ?? "#9E9E9E"; // default abu2 kalau null
+    final hex = colorMap[kodeShift] ?? '#9E9E9E';
     return hexToColor(hex);
   }
 
-  Widget buildShiftCircle(String? status, Map<String, String> colorMap) {
-    if (status == null || status.isEmpty) return SizedBox.shrink();
+  /// Mengambil data libur nasional berdasarkan tanggal.
+  Map<String, dynamic>? getHoliday(DateTime date) {
+    for (final holiday in refLiburNasional) {
+      final tahun = int.tryParse('${holiday['tahun']}');
+      final bulan = int.tryParse('${holiday['bulan']}');
+      final tgl = int.tryParse('${holiday['tgl']}');
 
-    final colorHex = colorMap[status] ?? "#9E9E9E";
+      if (tahun == date.year && bulan == date.month && tgl == date.day) {
+        return holiday;
+      }
+    }
+
+    return null;
+  }
+
+  Widget buildShiftCircle(String? status, Map<String, String> colors) {
+    if (status == null || status.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final colorHex = colors[status] ?? '#9E9E9E';
+    final shiftColor = hexToColor(colorHex);
 
     return Container(
-      constraints: const BoxConstraints(minWidth: 12, minHeight: 12),
+      constraints: const BoxConstraints(minWidth: 25, minHeight: 20),
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       decoration: BoxDecoration(
-        color: hexToColor(colorHex),
-        shape: BoxShape.circle,
+        color: shiftColor,
+        borderRadius: BorderRadius.circular(7),
       ),
       alignment: Alignment.center,
       child: FittedBox(
@@ -58,8 +91,11 @@ class _JadwalPageState extends State<JadwalPage> {
         child: Text(
           status,
           style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+            fontFamily: 'Poppins',
+            fontSize: 8,
+            fontWeight: FontWeight.w700,
+            color: CupertinoColors.white,
+            decoration: TextDecoration.none,
           ),
         ),
       ),
@@ -67,22 +103,23 @@ class _JadwalPageState extends State<JadwalPage> {
   }
 
   Widget buildLegendCircle(String code, Color? color) {
-    return FittedBox(
-      child: Container(
-        width: 20,
-        height: 20,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: color ?? CupertinoColors.systemGrey,
-          shape: BoxShape.circle,
-        ),
-        child: Text(
-          code,
-          style: const TextStyle(
-            fontSize: 8,
-            fontWeight: FontWeight.bold,
-            color: CupertinoColors.white,
-          ),
+    return Container(
+      width: 28,
+      height: 28,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: color ?? CupertinoColors.systemGrey,
+        borderRadius: BorderRadius.circular(9),
+      ),
+      child: Text(
+        code,
+        maxLines: 1,
+        style: const TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 8,
+          fontWeight: FontWeight.w700,
+          color: CupertinoColors.white,
+          decoration: TextDecoration.none,
         ),
       ),
     );
@@ -95,51 +132,80 @@ class _JadwalPageState extends State<JadwalPage> {
   }
 
   Future<void> fetchJadwal() async {
-    setState(() {
-      isLoading = true;
-      jadwalKosong = false; // Reset dulu tiap fetch
-    });
+    if (mounted) {
+      setState(() {
+        isLoading = true;
+        jadwalKosong = false;
+      });
+    }
 
     final bulan = selectedDate.month.toString().padLeft(2, '0');
     final tahun = selectedDate.year;
+
     final url = '${ApiService.baseUrl}/jadwal2/${widget.id_user}/$bulan/$tahun';
 
     try {
       final response = await http.get(Uri.parse(url));
+
+      if (!mounted) return;
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
-        // Cek isi jadwal
-        if (data['jadwal'] == null || (data['jadwal'] as Map).isEmpty) {
+        final rawJadwal = data['jadwal'];
+
+        if (rawJadwal == null || (rawJadwal is Map && rawJadwal.isEmpty)) {
           setState(() {
+            jadwalData = {};
+            rekanKerja = {};
+            refShift = {};
+            refJam = {};
+            iconMap = {};
+            colorMap = {};
+            flowData = {};
+            refLiburNasional = [];
             jadwalKosong = true;
           });
         } else {
           setState(() {
             jadwalData = Map<String, String>.from(data['jadwal'] ?? {});
+
             rekanKerja = Map<String, dynamic>.from(data['rekan_kerja'] ?? {});
+
             refShift = Map<String, String>.from(data['ref_shift'] ?? {});
+
             refJam = Map<String, String>.from(data['ref_jam'] ?? {});
-            iconMap = Map<String, String>.from(
-              data['icon'] ?? {},
-            ); // karena key icon tidak ada
+
+            iconMap = Map<String, String>.from(data['icon'] ?? {});
+
             colorMap = Map<String, String>.from(data['color'] ?? {});
+
             flowData = Map<String, dynamic>.from(data['flow'] ?? {});
-            jadwalKosong = false; // Ada data, bukan kosong
+
+            refLiburNasional = (data['ref_libur_nasional'] as List? ?? [])
+                .whereType<Map>()
+                .map((item) => Map<String, dynamic>.from(item))
+                .toList();
+
+            jadwalKosong = false;
           });
         }
       } else {
-        debugPrint('Gagal mengambil jadwal');
         setState(() {
           jadwalKosong = true;
         });
       }
     } catch (e) {
-      debugPrint('Error: $e');
+      debugPrint('Error fetch jadwal: $e');
+
+      if (!mounted) return;
+
       setState(() {
         jadwalKosong = true;
       });
     } finally {
+      if (!mounted) return;
+
       setState(() {
         isLoading = false;
       });
@@ -148,7 +214,9 @@ class _JadwalPageState extends State<JadwalPage> {
 
   void _showDetail(String tanggal, String status) {
     final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
-    final dynamic rawRekan = rekanKerja[tanggal];
+
+    final rawRekan = rekanKerja[tanggal];
+
     List<dynamic> rekan = [];
 
     if (rawRekan is List) {
@@ -159,108 +227,221 @@ class _JadwalPageState extends State<JadwalPage> {
 
     final namaRekan = rekan.isNotEmpty ? rekan.join(', ') : '-';
 
+    final namaShift = refShift[status] ?? status;
+    final jam = refJam[status];
+
+    final holiday = getHoliday(
+      DateTime(
+        selectedDate.year,
+        selectedDate.month,
+        int.tryParse(tanggal) ?? 0,
+      ),
+    );
+
     showCupertinoDialog(
       context: context,
-      builder: (_) => CupertinoAlertDialog(
-        title: Text(
-          "Detail Shift",
-          style: TextStyle(
-            fontSize: 16,
-            color: isDark ? CupertinoColors.white : CupertinoColors.black,
+      builder: (dialogContext) {
+        return CupertinoAlertDialog(
+          title: Text(
+            'Detail Shift',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: isDark ? CupertinoColors.white : CupertinoColors.black,
+            ),
           ),
-        ),
-        content: Align(
-          alignment: Alignment.centerLeft, // 🔹 buat rata kiri semua
-          child: Padding(
-            padding: const EdgeInsets.only(
-              top: 4.0,
-            ), // sedikit jarak dari title
+          content: Padding(
+            padding: const EdgeInsets.only(top: 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  "Shift   : ${refShift[status] ?? status}",
-                  textAlign: TextAlign.left,
+                _buildDialogInfo(
+                  icon: CupertinoIcons.rectangle_3_offgrid,
+                  label: 'Shift',
+                  value: namaShift,
+                  isDark: isDark,
                 ),
-                Text(
-                  "Jam   : ${refJam[status] != null && refJam[status]!.isNotEmpty ? refJam[status]! + " WIB" : "-"}",
-                  textAlign: TextAlign.left,
+                const SizedBox(height: 10),
+                _buildDialogInfo(
+                  icon: CupertinoIcons.clock,
+                  label: 'Jam',
+                  value: jam != null && jam.isNotEmpty ? '$jam WIB' : '-',
+                  isDark: isDark,
                 ),
-                // Hanya tampil jika refJam[status] ada isinya
-                if (refJam[status] != null && refJam[status]!.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    "Rekan Kerja Shift $status :\n$namaRekan",
-                    textAlign: TextAlign.left,
+                if (jam != null && jam.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  _buildDialogInfo(
+                    icon: CupertinoIcons.person_2_fill,
+                    label: 'Rekan Kerja',
+                    value: namaRekan,
+                    isDark: isDark,
+                  ),
+                ],
+                if (holiday != null) ...[
+                  const SizedBox(height: 10),
+                  _buildDialogInfo(
+                    icon: CupertinoIcons.calendar,
+                    label: 'Libur Nasional',
+                    value: '${holiday['deskripsi'] ?? '-'}',
+                    isDark: isDark,
                   ),
                 ],
               ],
             ),
           ),
-        ),
-        actions: [
-          CupertinoDialogAction(
-            isDefaultAction: true,
-            child: Text(
-              "Tutup",
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? CupertinoColors.white : CupertinoColors.black,
+          actions: [
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text(
+                'Tutup',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-            onPressed: () => Navigator.of(context).pop(),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDialogInfo({
+    required IconData icon,
+    required String label,
+    required String value,
+    required bool isDark,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 15, color: CupertinoColors.activeBlue),
+        const SizedBox(width: 8),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: '$label\n',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? CupertinoColors.systemGrey2
+                        : CupertinoColors.systemGrey,
+                  ),
+                ),
+                TextSpan(
+                  text: value,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? CupertinoColors.white
+                        : CupertinoColors.black,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget buildDateCell(DateTime date, bool isCurrentMonth, bool isToday) {
     final key = date.day.toString().padLeft(2, '0');
+
     final status = isCurrentMonth ? jadwalData[key] : null;
+
+    final holiday = isCurrentMonth ? getHoliday(date) : null;
+
+    final isHoliday = holiday != null;
+
     final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
 
-    Widget? shiftCircle;
-    if (status != null && status.isNotEmpty) {
-      shiftCircle = buildShiftCircle(status, colorMap);
-    }
+    final backgroundColor = isHoliday
+        ? (isDark ? const Color(0xFF30251A) : const Color(0xFFFFF7E8))
+        : (isDark ? const Color(0xFF171B22) : CupertinoColors.white);
+
+    final textColor = !isCurrentMonth
+        ? (isDark ? const Color(0xFF4B5563) : CupertinoColors.systemGrey3)
+        : (isDark ? CupertinoColors.white : CupertinoColors.black);
+
+    final borderColor = isToday
+        ? CupertinoColors.activeBlue
+        : isHoliday
+        ? (isDark ? const Color(0xFFE09B32) : const Color(0xFFF2B84B))
+        : (isDark ? const Color(0xFF242A33) : const Color(0xFFE7EAF0));
 
     return GestureDetector(
-      onTap: status != null ? () => _showDetail(key, status) : null,
-      child: Container(
+      onTap: status != null && status.isNotEmpty
+          ? () => _showDetail(key, status)
+          : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
         decoration: BoxDecoration(
-          color: isDark
-              ? CupertinoColors.secondaryLabel
-              : CupertinoColors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: isToday
-              ? Border.all(color: CupertinoColors.activeBlue, width: 2)
-              : null,
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: borderColor,
+            width: isToday || isHoliday ? 1.5 : 0.8,
+          ),
         ),
-        padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                '${date.day}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isDark
-                      ? (isCurrentMonth
-                            ? CupertinoColors.white
-                            : CupertinoColors.systemGrey)
-                      : (isCurrentMonth
-                            ? CupertinoColors.black
-                            : CupertinoColors.systemGrey),
-                ),
+            SizedBox(
+              width: 23,
+              height: 23,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (isToday)
+                    Container(
+                      width: 23,
+                      height: 23,
+                      decoration: const BoxDecoration(
+                        color: CupertinoColors.activeBlue,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  Text(
+                    '${date.day}',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 10.5,
+                      fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+                      color: isToday ? CupertinoColors.white : textColor,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ],
               ),
             ),
-            if (shiftCircle != null) ...[
+            const SizedBox(height: 2),
+            if (status != null && status.isNotEmpty)
+              buildShiftCircle(status, colorMap)
+            else
+              const SizedBox(height: 20),
+            if (isHoliday) ...[
               const SizedBox(height: 2),
-              Flexible(child: shiftCircle),
+              Container(
+                width: 5,
+                height: 5,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF59E0B),
+                  shape: BoxShape.circle,
+                ),
+              ),
             ],
           ],
         ),
@@ -270,574 +451,484 @@ class _JadwalPageState extends State<JadwalPage> {
 
   Widget buildCalendar() {
     final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+
     final firstDay = DateTime(selectedDate.year, selectedDate.month, 1);
+
     final totalDays = DateTime(
       selectedDate.year,
       selectedDate.month + 1,
       0,
     ).day;
+
     final startWeekday = firstDay.weekday;
     final daysBefore = startWeekday - 1;
 
     final prevMonth = DateTime(selectedDate.year, selectedDate.month - 1);
+
     final prevMonthDays = DateTime(prevMonth.year, prevMonth.month + 1, 0).day;
+
     final nextMonth = DateTime(selectedDate.year, selectedDate.month + 1);
 
-    List<DateTime> calendarDates = [];
+    final calendarDates = <DateTime>[];
+
     for (int i = daysBefore; i > 0; i--) {
       calendarDates.add(
         DateTime(prevMonth.year, prevMonth.month, prevMonthDays - i + 1),
       );
     }
+
     for (int i = 1; i <= totalDays; i++) {
       calendarDates.add(DateTime(selectedDate.year, selectedDate.month, i));
     }
-    int remaining = 7 - (calendarDates.length % 7);
-    if (remaining < 7) {
-      for (int i = 1; i <= remaining; i++) {
-        calendarDates.add(DateTime(nextMonth.year, nextMonth.month, i));
-      }
+
+    final remaining = (7 - calendarDates.length % 7) % 7;
+
+    for (int i = 1; i <= remaining; i++) {
+      calendarDates.add(DateTime(nextMonth.year, nextMonth.month, i));
     }
 
-    final weekdays = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+    const weekdays = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+
     final entries = refShift.entries.toList();
+
     final half = (entries.length / 2).ceil();
+
     final leftItems = entries.sublist(0, half);
+
     final rightItems = entries.sublist(half);
 
     if (jadwalKosong) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 40),
-            Icon(
-              CupertinoIcons.exclamationmark_circle,
-              size: 30,
-              color: CupertinoColors.systemGrey,
-            ),
-            const SizedBox(height: 18),
-            const Text(
-              "Jadwal tidak ada",
-              style: TextStyle(fontSize: 16, color: CupertinoColors.systemGrey),
-            ),
-          ],
-        ),
-      );
+      return _buildEmptySchedule(isDark: isDark);
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          decoration: BoxDecoration(
-            color: isDark
-                ? CupertinoColors.secondaryLabel
-                : CupertinoColors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: isDark
-                    ? CupertinoColors.black
-                    : CupertinoColors.black.withOpacity(0.2),
-                blurRadius: 6,
-                offset: Offset(0, 3),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: weekdays
-                    .map(
-                      (day) => Expanded(
-                        child: Center(
-                          child: Text(
-                            day,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-              const SizedBox(height: 6),
-              GridView.count(
-                shrinkWrap: true,
-                crossAxisCount: 7,
-                padding: EdgeInsets.zero,
-                crossAxisSpacing: 4,
-                mainAxisSpacing: 4,
-                physics: const NeverScrollableScrollPhysics(),
-                children: calendarDates
-                    .map(
-                      (date) => buildDateCell(
-                        date,
-                        date.month == selectedDate.month,
-                        isSameDate(
-                          date,
-                          DateTime.now(),
-                        ), // 👈 cek apakah ini hari ini
-                      ),
-                    )
-                    .toList(),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                "Klik Tanggal di atas untuk melihat Detail Shift",
-                style: TextStyle(
-                  fontSize: 10,
-                  color: isDark ? CupertinoColors.white : CupertinoColors.black,
-                ),
-              ),
-            ],
-          ),
+        _buildCalendarCard(
+          isDark: isDark,
+          weekdays: weekdays,
+          calendarDates: calendarDates,
         ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: isDark
-                ? CupertinoColors.secondaryLabel
-                : CupertinoColors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: isDark
-                    ? CupertinoColors.black
-                    : CupertinoColors.black.withOpacity(0.2),
-                blurRadius: 6,
-                offset: Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Text(
-                  "Keterangan Shift",
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? CupertinoColors.white
-                        : CupertinoColors.black,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Kiri
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: leftItems.map((entry) {
-                        final code = entry.key;
-                        final label = entry.value;
-                        final iconColor = getColor(code);
 
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            children: [
-                              buildLegendCircle(code, iconColor),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  label,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: isDark
-                                        ? CupertinoColors.white
-                                        : CupertinoColors.black,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
+        if (refLiburNasional.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _buildNationalHolidayCard(isDark: isDark),
+        ],
 
-                  const SizedBox(width: 16),
+        const SizedBox(height: 14),
 
-                  // Kanan
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: rightItems.map((entry) {
-                        final code = entry.key;
-                        final label = entry.value;
-                        final iconColor = getColor(code);
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            children: [
-                              buildLegendCircle(code, iconColor),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  label,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: isDark
-                                        ? CupertinoColors.white
-                                        : CupertinoColors.black,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+        _buildShiftLegendCard(
+          isDark: isDark,
+          leftItems: leftItems,
+          rightItems: rightItems,
         ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: isDark
-                ? CupertinoColors.secondaryLabel
-                : CupertinoColors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: isDark
-                    ? CupertinoColors.black
-                    : CupertinoColors.black.withOpacity(0.2),
-                blurRadius: 6,
-                offset: Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Text(
-                  "Keterangan Jadwal",
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? CupertinoColors.white
-                        : CupertinoColors.black,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              ...flowData.entries.map((entry) {
-                final key = entry.key;
-                final value = entry.value;
 
-                if (key == 'Daftar Staf' && value is List) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "Daftar Staf (Diurutkan sesuai Abjad) : ",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        ...value.map<Widget>(
-                          (staf) => Padding(
-                            padding: const EdgeInsets.only(left: 8, bottom: 2),
-                            child: Text(
-                              "- $staf",
-                              style: TextStyle(fontSize: 12),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                } else {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: Text(
-                            "$key",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          flex: 7,
-                          child: Text(
-                            ": $value",
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-              }).toList(),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
+        if (flowData.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _buildScheduleInfoCard(isDark: isDark),
+        ],
       ],
     );
   }
 
-  void _showMonthPicker() async {
-    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+  Widget _buildCalendarCard({
+    required bool isDark,
+    required List<String> weekdays,
+    required List<DateTime> calendarDates,
+  }) {
+    final cardColor = isDark ? const Color(0xFF11151C) : CupertinoColors.white;
 
-    int selectedMonth = selectedDate.month;
-    int selectedYear = selectedDate.year;
+    final secondaryColor = isDark
+        ? CupertinoColors.systemGrey2
+        : CupertinoColors.systemGrey;
 
-    await showCupertinoModalPopup(
-      context: context,
-      builder: (_) => SafeArea(
-        child: Container(
-          height: 310,
-          color: isDark
-              ? CupertinoColors.black.withOpacity(0.8)
-              : CupertinoColors.systemBackground,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  'Pilihan Filter Bulan & Tahun',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    decoration: TextDecoration.none,
-                    color: isDark
-                        ? CupertinoColors.white
-                        : CupertinoColors.black,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: isDark ? const Color(0xFF242A33) : const Color(0xFFE7EAF0),
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: weekdays.map((day) {
+              final isWeekend = day == 'Sab' || day == 'Min';
+
+              return Expanded(
+                child: Center(
+                  child: Text(
+                    day,
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: isWeekend
+                          ? CupertinoColors.systemRed
+                          : secondaryColor,
+                      decoration: TextDecoration.none,
+                    ),
                   ),
                 ),
+              );
+            }).toList(),
+          ),
+
+          const SizedBox(height: 8),
+
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              crossAxisSpacing: 5,
+              mainAxisSpacing: 5,
+
+              // Dibuat lebih tinggi agar tidak overflow.
+              childAspectRatio: 0.68,
+            ),
+            itemCount: calendarDates.length,
+            itemBuilder: (context, index) {
+              final date = calendarDates[index];
+
+              return buildDateCell(
+                date,
+                date.month == selectedDate.month,
+                isSameDate(date, DateTime.now()),
+              );
+            },
+          ),
+
+          const SizedBox(height: 10),
+
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 4,
+            runSpacing: 4,
+            children: [
+              Icon(
+                CupertinoIcons.hand_draw_fill,
+                size: 12,
+                color: secondaryColor,
               ),
-              SizedBox(
-                height: 200,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: CupertinoPicker(
-                        itemExtent: 40,
-                        scrollController: FixedExtentScrollController(
-                          initialItem: selectedMonth - 1,
-                        ),
-                        onSelectedItemChanged: (index) {
-                          selectedMonth = index + 1;
-                        },
-                        children: List.generate(
-                          12,
-                          (index) => Center(
-                            child: Text(
-                              "${index + 1}".padLeft(2, '0'),
-                              style: TextStyle(
-                                color: isDark
-                                    ? CupertinoColors.white
-                                    : CupertinoColors.black,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: CupertinoPicker(
-                        itemExtent: 40,
-                        scrollController: FixedExtentScrollController(
-                          initialItem: DateTime.now().year - selectedYear,
-                        ),
-                        onSelectedItemChanged: (index) {
-                          selectedYear = DateTime.now().year - index;
-                        },
-                        children: List.generate(
-                          3, // 10 tahun ke belakang
-                          (index) => Center(
-                            child: Text(
-                              "${DateTime.now().year - index}",
-                              style: TextStyle(
-                                color: isDark
-                                    ? CupertinoColors.white
-                                    : CupertinoColors.black,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+              Text(
+                'Ketuk tanggal untuk melihat detail shift',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 9.5,
+                  color: secondaryColor,
+                  decoration: TextDecoration.none,
                 ),
               ),
-              CupertinoButton(
-                child: const Text("Terapkan"),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  setState(() {
-                    selectedDate = DateTime(selectedYear, selectedMonth);
-                  });
-                  fetchJadwal();
-                },
-              ),
+              if (refLiburNasional.isNotEmpty) ...[
+                const SizedBox(width: 6),
+                Container(
+                  width: 5,
+                  height: 5,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF59E0B),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Text(
+                  'Libur Nasional',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 9.5,
+                    color: secondaryColor,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+              ],
             ],
           ),
-        ),
+        ],
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final formatter = DateFormat('MMMM yyyy', 'id');
-    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+  Widget _buildNationalHolidayCard({required bool isDark}) {
+    final cardColor = isDark ? const Color(0xFF11151C) : CupertinoColors.white;
 
-    return Scaffold(
-      body: Stack(
+    final titleColor = isDark ? CupertinoColors.white : CupertinoColors.black;
+
+    final secondaryColor = isDark
+        ? CupertinoColors.systemGrey2
+        : CupertinoColors.systemGrey;
+
+    final sortedHolidays = [...refLiburNasional]
+      ..sort((a, b) {
+        final aDate = DateTime(
+          int.tryParse('${a['tahun']}') ?? 0,
+          int.tryParse('${a['bulan']}') ?? 0,
+          int.tryParse('${a['tgl']}') ?? 0,
+        );
+
+        final bDate = DateTime(
+          int.tryParse('${b['tahun']}') ?? 0,
+          int.tryParse('${b['bulan']}') ?? 0,
+          int.tryParse('${b['tgl']}') ?? 0,
+        );
+
+        return aDate.compareTo(bDate);
+      });
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: isDark ? const Color(0xFF242A33) : const Color(0xFFE7EAF0),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 🎨 BACKGROUND GRADIENT + BLUR
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: isDark
-                      ? [Colors.black, Colors.grey.shade900]
-                      : [Colors.blue.shade50, Colors.white],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  CupertinoIcons.calendar,
+                  size: 17,
+                  color: Color(0xFFF59E0B),
                 ),
               ),
-            ),
-          ),
-          Positioned(
-            top: -50,
-            left: -50,
-            child: _blurCircle(Colors.blueAccent.withOpacity(0.2)),
-          ),
-          Positioned(
-            bottom: -60,
-            right: -40,
-            child: _blurCircle(Colors.purpleAccent.withOpacity(0.2)),
-          ),
-
-          // ✅ NAVBAR
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: CupertinoNavigationBar(
-              middle: Text(
-                'Jadwal Saya',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: isDark
-                      ? CupertinoColors.systemGrey2
-                      : CupertinoColors.black,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Libur Nasional',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: titleColor,
+                    decoration: TextDecoration.none,
+                  ),
                 ),
               ),
-              backgroundColor: Colors.transparent,
-              border: null,
-            ),
+            ],
           ),
 
-          // ✅ CONTENT
-          Positioned.fill(
-            top:
-                18 +
-                MediaQuery.of(
-                  context,
-                ).padding.top, // tinggi navbar = kToolbarHeight
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+          const SizedBox(height: 14),
+
+          ...sortedHolidays.map((holiday) {
+            final day = int.tryParse('${holiday['tgl']}') ?? 0;
+
+            final month = int.tryParse('${holiday['bulan']}') ?? 0;
+
+            final year = int.tryParse('${holiday['tahun']}') ?? 0;
+
+            final description = '${holiday['deskripsi'] ?? 'Libur Nasional'}'
+                .trim();
+
+            final date = DateTime(year, month, day);
+
+            final formattedDate = DateFormat(
+              'EEEE, dd MMMM yyyy',
+              'id',
+            ).format(date);
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    margin: const EdgeInsets.only(top: 5),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF59E0B),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: CupertinoButton(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                            color: isDark
-                                ? CupertinoColors.tertiaryLabel
-                                : CupertinoColors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            onPressed: _showMonthPicker,
-                            child: Row(
-                              children: [
-                                Text(
-                                  "Ubah Bulan :",
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: isDark
-                                        ? CupertinoColors.white
-                                        : CupertinoColors.black,
-                                  ),
-                                ),
-                                const Spacer(), // mendorong teks tanggal ke kanan
-                                Text(
-                                  formatter.format(selectedDate),
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: isDark
-                                        ? CupertinoColors.white
-                                        : CupertinoColors.black,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Icon(
-                                  CupertinoIcons.calendar,
-                                  color: isDark
-                                      ? CupertinoColors.white
-                                      : CupertinoColors.black,
-                                ),
-                              ],
-                            ),
+                        Text(
+                          formattedDate,
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: secondaryColor,
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          description,
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: titleColor,
+                            decoration: TextDecoration.none,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    isLoading
-                        ? const Expanded(
-                            child: Center(child: CupertinoActivityIndicator()),
-                          )
-                        : Expanded(
-                            child: jadwalKosong
-                                ? buildCalendar()
-                                : SingleChildScrollView(child: buildCalendar()),
-                          ),
-                  ],
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShiftLegendCard({
+    required bool isDark,
+    required List<MapEntry<String, String>> leftItems,
+    required List<MapEntry<String, String>> rightItems,
+  }) {
+    final cardColor = isDark ? const Color(0xFF11151C) : CupertinoColors.white;
+
+    final titleColor = isDark ? CupertinoColors.white : CupertinoColors.black;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: isDark ? const Color(0xFF242A33) : const Color(0xFFE7EAF0),
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: CupertinoColors.activeBlue.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                child: const Icon(
+                  CupertinoIcons.calendar,
+                  size: 17,
+                  color: CupertinoColors.activeBlue,
+                ),
+              ),
+
+              const SizedBox(width: 10),
+
+              Expanded(
+                child: Text(
+                  'Keterangan Shift',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: titleColor,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          if (refShift.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Text(
+                'Tidak ada keterangan shift.',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 11,
+                  color: isDark
+                      ? CupertinoColors.systemGrey2
+                      : CupertinoColors.systemGrey,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            )
+          else ...[
+            const SizedBox(height: 16),
+
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    children: leftItems
+                        .map(
+                          (entry) => _buildLegendItem(
+                            code: entry.key,
+                            label: entry.value,
+                            isDark: isDark,
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+
+                if (rightItems.isNotEmpty) const SizedBox(width: 14),
+
+                Expanded(
+                  child: Column(
+                    children: rightItems
+                        .map(
+                          (entry) => _buildLegendItem(
+                            code: entry.key,
+                            label: entry.value,
+                            isDark: isDark,
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem({
+    required String code,
+    required String label,
+    required bool isDark,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          buildLegendCircle(code, getColor(code)),
+
+          const SizedBox(width: 8),
+
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 10.5,
+                fontWeight: FontWeight.w500,
+                color: isDark ? CupertinoColors.white : CupertinoColors.black,
+                decoration: TextDecoration.none,
               ),
             ),
           ),
@@ -846,15 +937,614 @@ class _JadwalPageState extends State<JadwalPage> {
     );
   }
 
-  // 🔹 Helper untuk membuat blur circle
-  Widget _blurCircle(Color color) {
+  Widget _buildScheduleInfoCard({required bool isDark}) {
+    final cardColor = isDark ? const Color(0xFF11151C) : CupertinoColors.white;
+
+    final foregroundColor = isDark
+        ? CupertinoColors.white
+        : CupertinoColors.black;
+
+    final secondaryColor = isDark
+        ? CupertinoColors.systemGrey2
+        : CupertinoColors.systemGrey;
+
     return Container(
-      width: 200,
-      height: 200,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-        child: Container(color: Colors.transparent),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: isDark ? const Color(0xFF242A33) : const Color(0xFFE7EAF0),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: CupertinoColors.activeBlue.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  CupertinoIcons.info_circle_fill,
+                  size: 17,
+                  color: CupertinoColors.activeBlue,
+                ),
+              ),
+
+              const SizedBox(width: 10),
+
+              Text(
+                'Keterangan Jadwal',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: foregroundColor,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          ...flowData.entries.map((entry) {
+            final key = entry.key;
+            final value = entry.value;
+
+            if (key == 'Daftar Staf' && value is List) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Daftar Staf',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: foregroundColor,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+
+                    const SizedBox(height: 7),
+
+                    ...value.map<Widget>((staf) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 4, left: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '•',
+                              style: TextStyle(
+                                color: CupertinoColors.activeBlue,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+
+                            const SizedBox(width: 7),
+
+                            Expanded(
+                              child: Text(
+                                '$staf',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 10.5,
+                                  color: foregroundColor,
+                                  decoration: TextDecoration.none,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              );
+            }
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 90,
+                    child: Text(
+                      '$key',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                        color: secondaryColor,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 8),
+
+                  Expanded(
+                    child: Text(
+                      '$value',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w500,
+                        color: foregroundColor,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptySchedule({required bool isDark}) {
+    final secondaryColor = isDark
+        ? CupertinoColors.systemGrey2
+        : CupertinoColors.systemGrey;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 30),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF11151C) : CupertinoColors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: isDark ? const Color(0xFF242A33) : const Color(0xFFE7EAF0),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1B2028) : const Color(0xFFF0F2F5),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              CupertinoIcons.calendar,
+              size: 32,
+              color: secondaryColor,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          Text(
+            'Jadwal tidak ada',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: isDark ? CupertinoColors.white : CupertinoColors.black,
+              decoration: TextDecoration.none,
+            ),
+          ),
+
+          const SizedBox(height: 5),
+
+          Text(
+            'Tidak terdapat jadwal pada bulan yang dipilih.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 10.5,
+              color: secondaryColor,
+              decoration: TextDecoration.none,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showMonthPicker() async {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+
+    int selectedMonth = selectedDate.month;
+    int selectedYear = selectedDate.year;
+
+    final currentYear = DateTime.now().year;
+
+    await showCupertinoModalPopup(
+      context: context,
+      builder: (popupContext) {
+        return Container(
+          height: 330,
+          decoration: BoxDecoration(
+            color: isDark
+                ? const Color(0xFF11151C)
+                : CupertinoColors.systemBackground,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              children: [
+                const SizedBox(height: 8),
+
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF3A404A)
+                        : const Color(0xFFD1D5DB),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                Text(
+                  'Pilih Bulan & Tahun',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: isDark
+                        ? CupertinoColors.white
+                        : CupertinoColors.black,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                Expanded(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: CupertinoPicker(
+                          itemExtent: 42,
+                          scrollController: FixedExtentScrollController(
+                            initialItem: selectedMonth - 1,
+                          ),
+                          onSelectedItemChanged: (index) {
+                            selectedMonth = index + 1;
+                          },
+                          children: List.generate(12, (index) {
+                            return Center(
+                              child: Text(
+                                '${index + 1}'.padLeft(2, '0'),
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 14,
+                                  color: isDark
+                                      ? CupertinoColors.white
+                                      : CupertinoColors.black,
+                                  decoration: TextDecoration.none,
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+
+                      Container(
+                        width: 1,
+                        height: 150,
+                        color: isDark
+                            ? const Color(0xFF242A33)
+                            : const Color(0xFFE5E7EB),
+                      ),
+
+                      Expanded(
+                        child: CupertinoPicker(
+                          itemExtent: 42,
+                          scrollController: FixedExtentScrollController(
+                            initialItem: currentYear - selectedYear,
+                          ),
+                          onSelectedItemChanged: (index) {
+                            selectedYear = currentYear - index;
+                          },
+                          children: List.generate(10, (index) {
+                            return Center(
+                              child: Text(
+                                '${currentYear - index}',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 14,
+                                  color: isDark
+                                      ? CupertinoColors.white
+                                      : CupertinoColors.black,
+                                  decoration: TextDecoration.none,
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: CupertinoButton.filled(
+                      borderRadius: BorderRadius.circular(15),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      onPressed: () {
+                        Navigator.pop(popupContext);
+
+                        setState(() {
+                          selectedDate = DateTime(selectedYear, selectedMonth);
+                        });
+
+                        fetchJadwal();
+                      },
+                      child: const Text(
+                        'Terapkan',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final formatter = DateFormat('MMMM yyyy', 'id');
+
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+
+    final backgroundColor = isDark
+        ? const Color(0xFF080A0F)
+        : const Color(0xFFF5F7FA);
+
+    final foregroundColor = isDark
+        ? CupertinoColors.white
+        : CupertinoColors.black;
+
+    final secondaryColor = isDark
+        ? CupertinoColors.systemGrey2
+        : CupertinoColors.systemGrey;
+
+    return CupertinoPageScaffold(
+      backgroundColor: backgroundColor,
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            _buildHeader(
+              foregroundColor: foregroundColor,
+              secondaryColor: secondaryColor,
+            ),
+
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(14, 4, 14, 125),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildMonthSelector(
+                      isDark: isDark,
+                      foregroundColor: foregroundColor,
+                      secondaryColor: secondaryColor,
+                      formatter: formatter,
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    if (isLoading)
+                      _buildLoading(isDark: isDark)
+                    else
+                      buildCalendar(),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader({
+    required Color foregroundColor,
+    required Color secondaryColor,
+  }) {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Jadwal Saya',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: foregroundColor,
+                    decoration: TextDecoration.none,
+                    height: 1.15,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Lihat jadwal kerja dan shift Anda',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w400,
+                    color: secondaryColor,
+                    decoration: TextDecoration.none,
+                    height: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 12),
+
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            minSize: 0,
+            onPressed: isLoading ? null : () => fetchJadwal(),
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF151A22) : CupertinoColors.white,
+                borderRadius: BorderRadius.circular(13),
+                border: Border.all(
+                  color: isDark
+                      ? const Color(0xFF242A33)
+                      : const Color(0xFFE7EAF0),
+                ),
+              ),
+              child: Icon(
+                CupertinoIcons.refresh,
+                size: 18,
+                color: isLoading
+                    ? secondaryColor.withValues(alpha: 0.45)
+                    : CupertinoColors.activeBlue,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMonthSelector({
+    required bool isDark,
+    required Color foregroundColor,
+    required Color secondaryColor,
+    required DateFormat formatter,
+  }) {
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: _showMonthPicker,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF11151C) : CupertinoColors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isDark ? const Color(0xFF242A33) : const Color(0xFFE7EAF0),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: CupertinoColors.activeBlue.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: const Icon(
+                CupertinoIcons.calendar,
+                size: 18,
+                color: CupertinoColors.activeBlue,
+              ),
+            ),
+
+            const SizedBox(width: 12),
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Periode Jadwal',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 9.5,
+                      color: secondaryColor,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+
+                  const SizedBox(height: 2),
+
+                  Text(
+                    formatter.format(selectedDate),
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: foregroundColor,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            Icon(CupertinoIcons.chevron_down, size: 15, color: secondaryColor),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoading({required bool isDark}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 70),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF11151C) : CupertinoColors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: isDark ? const Color(0xFF242A33) : const Color(0xFFE7EAF0),
+        ),
+      ),
+      child: const Column(
+        children: [
+          CupertinoActivityIndicator(radius: 14),
+          SizedBox(height: 14),
+          Text(
+            'Memuat jadwal...',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 11,
+              color: CupertinoColors.systemGrey,
+              decoration: TextDecoration.none,
+            ),
+          ),
+        ],
       ),
     );
   }

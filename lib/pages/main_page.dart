@@ -85,9 +85,13 @@ class _MainPageState extends State<MainPage> {
         nip: widget.nip,
         fotoProfil: widget.fotoProfil,
       ),
+
       JadwalPage(id_user: widget.id_user),
+
       AbsensiPage(id_user: widget.id_user, nip: widget.nip),
+
       RekapPage(id_user: widget.id_user),
+
       SettingPage(
         id_user: widget.id_user,
         name: widget.name,
@@ -100,10 +104,14 @@ class _MainPageState extends State<MainPage> {
     return PopScope(
       canPop: false,
       child: Scaffold(
+        // Body dapat berada di belakang floating navigation bar.
         extendBody: true,
 
         body: IndexedStack(index: currentIndex, children: pages),
 
+        // ================================================================
+        // FLOATING BOTTOM NAVIGATION
+        // ================================================================
         bottomNavigationBar: SafeArea(
           minimum: const EdgeInsets.fromLTRB(14, 0, 14, 12),
           child: GestureDetector(
@@ -160,9 +168,9 @@ class FloatingLiquidNavigationBar extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(27),
 
-                // ============================================================
+                // ========================================================
                 // TRANSPARENT GLASS
-                // ============================================================
+                // ========================================================
                 color: isDark
                     ? Colors.white.withOpacity(0.12)
                     : Colors.white.withOpacity(0.32),
@@ -194,10 +202,9 @@ class FloatingLiquidNavigationBar extends StatelessWidget {
 
               child: Stack(
                 children: [
-                  // ==========================================================
+                  // ======================================================
                   // TOP GLASS REFLECTION
-                  // ==========================================================
-
+                  // ======================================================
                   Positioned(
                     left: 10,
                     right: 10,
@@ -227,9 +234,9 @@ class FloatingLiquidNavigationBar extends StatelessWidget {
                     ),
                   ),
 
-                  // ==========================================================
+                  // ======================================================
                   // SUBTLE BOTTOM GLASS SHADE
-                  // ==========================================================
+                  // ======================================================
                   Positioned(
                     left: 0,
                     right: 0,
@@ -259,18 +266,18 @@ class FloatingLiquidNavigationBar extends StatelessWidget {
                     ),
                   ),
 
-                  // ==========================================================
+                  // ======================================================
                   // LIQUID ACTIVE PILL
-                  // ==========================================================
+                  // ======================================================
                   _LiquidGlassPill(
                     currentIndex: currentIndex,
                     itemWidth: itemWidth,
                     isDark: isDark,
                   ),
 
-                  // ==========================================================
+                  // ======================================================
                   // NAVIGATION ITEMS
-                  // ==========================================================
+                  // ======================================================
                   Row(
                     children: List.generate(_items.length, (index) {
                       final item = _items[index];
@@ -382,9 +389,7 @@ class _LiquidGlassPillState extends State<_LiquidGlassPill>
         final t = _controller.value;
 
         final left = _position(t);
-
         final width = _liquidStretch(t);
-
         final radius = _borderRadius(t);
 
         return Positioned(
@@ -400,9 +405,9 @@ class _LiquidGlassPillState extends State<_LiquidGlassPill>
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(radius),
 
-                  // ========================================================
+                  // ======================================================
                   // TRANSPARENT LIQUID GLASS
-                  // ========================================================
+                  // ======================================================
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -447,10 +452,9 @@ class _LiquidGlassPillState extends State<_LiquidGlassPill>
 
                 child: Stack(
                   children: [
-                    // ======================================================
+                    // ====================================================
                     // TOP SPECULAR HIGHLIGHT
-                    // ======================================================
-
+                    // ====================================================
                     Positioned(
                       left: 7,
                       right: 7,
@@ -475,9 +479,9 @@ class _LiquidGlassPillState extends State<_LiquidGlassPill>
                       ),
                     ),
 
-                    // ======================================================
+                    // ====================================================
                     // MOVING LIGHT REFLECTION
-                    // ======================================================
+                    // ====================================================
                     Positioned(
                       left: 8 + (width - 30) * t,
                       top: 4,
@@ -500,9 +504,9 @@ class _LiquidGlassPillState extends State<_LiquidGlassPill>
                       ),
                     ),
 
-                    // ======================================================
+                    // ====================================================
                     // INNER SOFT REFLECTION
-                    // ======================================================
+                    // ====================================================
                     Positioned(
                       left: width * 0.15,
                       right: width * 0.15,
@@ -573,10 +577,9 @@ class _LiquidNavigationButton extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // ==============================================================
+            // ============================================================
             // ICON
-            // ==============================================================
-
+            // ============================================================
             AnimatedContainer(
               duration: const Duration(milliseconds: 320),
               curve: Curves.easeOutCubic,
@@ -606,9 +609,9 @@ class _LiquidNavigationButton extends StatelessWidget {
 
             const SizedBox(height: 2),
 
-            // ==============================================================
+            // ============================================================
             // LABEL
-            // ==============================================================
+            // ============================================================
             AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeOutCubic,

@@ -60,9 +60,6 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
   String jadwalKeterangan = '';
   String msgAbsensi = '';
 
-  DateTime? _lastRefreshLocation;
-  static const Duration _refreshCooldown = Duration(seconds: 15);
-
   final MapController mapController = MapController();
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -172,10 +169,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
 
           if (_position != null) {
             mapController.move(
-              LatLng(
-                _position!.latitude - 0.00075,
-                _position!.longitude - 0.00015,
-              ),
+              LatLng(_position!.latitude, _position!.longitude),
               18.0,
             );
           }
@@ -289,8 +283,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
               lokasiAbsensi!.longitude,
             );
             final insideSekarang = jarakSekarang <= radiusKantorMeter;
-            final radiusBerubah =
-                _lastInsideRadius != null &&
+            final radiusBerubah = _lastInsideRadius != null &&
                 insideSekarang != _lastInsideRadius;
 
             if (lastValidation == null ||
@@ -336,31 +329,6 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
   Future<void> _refreshLocation() async {
     debugPrint('Tombol Refresh Lokasi Atas ditekan');
 
-    final now = DateTime.now();
-
-    if (_lastRefreshLocation != null) {
-      final elapsed = now.difference(_lastRefreshLocation!);
-
-      if (elapsed < _refreshCooldown) {
-        final remaining = _refreshCooldown.inSeconds - elapsed.inSeconds;
-
-        if (mounted) {
-          _showAlert(
-            'Silakan menunggu..',
-            'Refresh lokasi dapat dilakukan kembali dalam $remaining detik.',
-          );
-        }
-
-        return;
-      }
-    }
-
-    if (_isRefreshingLocation) {
-      return;
-    }
-
-    _lastRefreshLocation = now;
-
     final permission = await Geolocator.checkPermission();
 
     if (permission == LocationPermission.deniedForever ||
@@ -397,10 +365,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
       try {
         if (_position != null) {
           mapController.move(
-            LatLng(
-              _position!.latitude - 0.00075,
-              _position!.longitude - 0.00015,
-            ),
+            LatLng(_position!.latitude, _position!.longitude),
             18.0,
           );
         }
@@ -843,8 +808,6 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
               jenis == AbsensiJenis.ijin ||
               jenis == AbsensiJenis.dinasLuar,
           jenis: jenis,
-          latitude: _position?.latitude,
-          longitude: _position?.longitude,
         ),
       ),
     );
@@ -879,190 +842,98 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
 
       showCupertinoDialog(
         context: context,
-        builder: (_) {
-          return StatefulBuilder(
-            builder: (context, setDialogState) {
-              final keterangan = keteranganController.text.trim();
-
-              final canSubmit = !butuhKeterangan || keterangan.isNotEmpty;
-
-              return CupertinoAlertDialog(
-                title: _buildDialogTitle(jenis),
-                content: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(height: 12),
-
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
-                      child: Image.file(
-                        file,
-                        height: 180,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    Center(
-                      child: Text(
-                        "Lat: ${lat ?? '-'}\n"
-                        "Long: ${long ?? '-'}",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 10.5,
-                          color: isDark
-                              ? CupertinoColors.systemGrey2
-                              : CupertinoColors.systemGrey,
-                          decoration: TextDecoration.none,
-                        ),
-                      ),
-                    ),
-
-                    if (butuhKeterangan) ...[
-                      const SizedBox(height: 12),
-
-                      Text(
-                        jenis == AbsensiJenis.dinasLuar
-                            ? 'Keterangan Dinas Luar'
-                            : 'Keterangan Ijin',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: isDark
-                              ? CupertinoColors.white
-                              : CupertinoColors.black,
-                          decoration: TextDecoration.none,
-                        ),
-                      ),
-
-                      const SizedBox(height: 3),
-
-                      Text(
-                        'Wajib diisi',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 9.5,
-                          color: CupertinoColors.systemRed,
-                          decoration: TextDecoration.none,
-                        ),
-                      ),
-
-                      const SizedBox(height: 6),
-
-                      CupertinoTextField(
-                        controller: keteranganController,
-                        maxLines: 3,
-                        placeholder: jenis == AbsensiJenis.dinasLuar
-                            ? 'Contoh: Dinas luar ke...'
-                            : 'Contoh: Keperluan ijin...',
-                        onChanged: (_) {
-                          setDialogState(() {});
-                        },
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          color: isDark
-                              ? CupertinoColors.white
-                              : CupertinoColors.black,
-                          fontSize: 11,
-                        ),
-                        placeholderStyle: TextStyle(
-                          fontFamily: 'Poppins',
-                          color: isDark
-                              ? CupertinoColors.systemGrey
-                              : CupertinoColors.placeholderText,
-                          fontSize: 11,
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 10,
-                          horizontal: 12,
-                        ),
-                      ),
-
-                      const SizedBox(height: 4),
-
-                      AnimatedOpacity(
-                        opacity: canSubmit ? 0 : 1,
-                        duration: const Duration(milliseconds: 150),
-                        child: const Text(
-                          'Keterangan wajib diisi sebelum Submit.',
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 9,
-                            color: CupertinoColors.systemRed,
-                            decoration: TextDecoration.none,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
+        builder: (_) => CupertinoAlertDialog(
+          title: _buildDialogTitle(jenis),
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Image.file(
+                  file,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
                 ),
-                actions: [
-                  CupertinoDialogAction(
-                    child: const Text('Batal'),
-                    onPressed: () {
-                      Navigator.pop(context);
-
-                      if (mounted) {
-                        setState(() {
-                          _sedangSubmitAbsensi = false;
-                        });
-                      }
-                    },
+              ),
+              const SizedBox(height: 12),
+              Center(
+                child: Text(
+                  "Lat: ${lat ?? '-'}\nLong: ${long ?? '-'}",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
+              if (butuhKeterangan) ...[
+                const SizedBox(height: 12),
+                Text(
+                  jenis == AbsensiJenis.dinasLuar
+                      ? "Keterangan Dinas Luar (Wajib Diisi)"
+                      : "Keterangan Ijin (Wajib Diisi)",
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: CupertinoColors.systemGrey,
+                    fontWeight: FontWeight.w600,
                   ),
-
-                  CupertinoDialogAction(
-                    isDefaultAction: canSubmit,
-                    onPressed: canSubmit
-                        ? () async {
-                            final keterangan = butuhKeterangan
-                                ? keteranganController.text.trim()
-                                : '';
-
-                            if (butuhKeterangan && keterangan.isEmpty) {
-                              return;
-                            }
-
-                            Navigator.pop(context);
-
-                            await _submitAbsensi(
-                              file,
-                              lat,
-                              long,
-                              jenis,
-                              keterangan,
-                            );
-
-                            await _refreshLocation();
-
-                            if (!mounted) return;
-
-                            setState(() {
-                              _sedangSubmitAbsensi = false;
-                            });
-                          }
-                        : null,
-                    child: Text(
-                      'Submit',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: canSubmit
-                            ? CupertinoColors.activeBlue
-                            : CupertinoColors.systemGrey,
-                      ),
-                    ),
+                ),
+                const SizedBox(height: 5),
+                CupertinoTextField(
+                  controller: keteranganController,
+                  maxLines: 2,
+                  style: TextStyle(
+                    color: isDark
+                        ? CupertinoColors.white
+                        : CupertinoColors.black,
+                    fontSize: 12,
                   ),
-                ],
-              );
-            },
-          );
-        },
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 9,
+                    horizontal: 12,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            CupertinoDialogAction(
+              child: const Text("Batal"),
+              onPressed: () {
+                if (!mounted) return;
+
+                Navigator.pop(context);
+
+                setState(() {
+                  _sedangSubmitAbsensi = false;
+                });
+              },
+            ),
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () async {
+                if (!mounted) return;
+
+                Navigator.pop(context);
+
+                final keterangan = butuhKeterangan
+                    ? keteranganController.text.trim()
+                    : '';
+
+                await _submitAbsensi(file, lat, long, jenis, keterangan);
+
+                await _refreshLocation();
+
+                if (!mounted) return;
+
+                setState(() {
+                  _sedangSubmitAbsensi = false;
+                });
+              },
+              child: const Text("Submit"),
+            ),
+          ],
+        ),
       );
     } else {
       _sedangSubmitAbsensi = false;
@@ -1313,7 +1184,10 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
 
     final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
 
-    const bottomContentPadding = 89.0;
+    // FloatingLiquidNavigationBar di MainPage:
+    // tinggi 70 px + margin bawah 12 px.
+    // Card dibuat rapat dengan navigation bar.
+    const bottomContentPadding = 76.0;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: Colors.transparent,

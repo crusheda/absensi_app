@@ -129,15 +129,11 @@ void main() async {
   // ✅ Inisialisasi kamera di awal
   cameras = await availableCameras();
 
+  final themeProvider = ThemeProvider();
+  await themeProvider.loadTheme();
+
   runApp(
-    ChangeNotifierProvider(
-      create: (_) {
-        final themeProvider = ThemeProvider();
-        themeProvider.loadTheme();
-        return themeProvider;
-      },
-      child: const MyApp(),
-    ),
+    ChangeNotifierProvider.value(value: themeProvider, child: const MyApp()),
   );
 }
 
