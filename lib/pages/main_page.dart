@@ -169,15 +169,15 @@ class FloatingLiquidNavigationBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(27),
 
                 // ========================================================
-                // TRANSPARENT GLASS
+                // DARK / LIGHT GLASS
                 // ========================================================
                 color: isDark
-                    ? Colors.white.withOpacity(0.12)
+                    ? Colors.white.withOpacity(0.055)
                     : Colors.white.withOpacity(0.32),
 
                 border: Border.all(
                   color: isDark
-                      ? Colors.white.withOpacity(0.22)
+                      ? Colors.white.withOpacity(0.10)
                       : Colors.white.withOpacity(0.58),
                   width: 1,
                 ),
@@ -185,14 +185,14 @@ class FloatingLiquidNavigationBar extends StatelessWidget {
                 boxShadow: [
                   BoxShadow(
                     color: isDark
-                        ? Colors.black.withOpacity(0.28)
+                        ? Colors.black.withOpacity(0.48)
                         : const Color(0xFF64748B).withOpacity(0.10),
                     blurRadius: 30,
                     spreadRadius: 0,
                     offset: const Offset(0, 10),
                   ),
                   BoxShadow(
-                    color: Colors.white.withOpacity(isDark ? 0.06 : 0.42),
+                    color: Colors.white.withOpacity(isDark ? 0.025 : 0.42),
                     blurRadius: 5,
                     spreadRadius: -1,
                     offset: const Offset(0, -1),
@@ -221,7 +221,7 @@ class FloatingLiquidNavigationBar extends StatelessWidget {
                             end: Alignment.bottomCenter,
                             colors: isDark
                                 ? [
-                                    Colors.white.withOpacity(0.14),
+                                    Colors.white.withOpacity(0.045),
                                     Colors.white.withOpacity(0.00),
                                   ]
                                 : [
@@ -254,7 +254,7 @@ class FloatingLiquidNavigationBar extends StatelessWidget {
                             colors: isDark
                                 ? [
                                     Colors.transparent,
-                                    Colors.black.withOpacity(0.08),
+                                    Colors.black.withOpacity(0.16),
                                   ]
                                 : [
                                     Colors.transparent,
@@ -305,7 +305,6 @@ class FloatingLiquidNavigationBar extends StatelessWidget {
 // ============================================================================
 // LIQUID GLASS PILL
 // ============================================================================
-
 class _LiquidGlassPill extends StatefulWidget {
   final int currentIndex;
   final double itemWidth;
@@ -406,16 +405,16 @@ class _LiquidGlassPillState extends State<_LiquidGlassPill>
                   borderRadius: BorderRadius.circular(radius),
 
                   // ======================================================
-                  // TRANSPARENT LIQUID GLASS
+                  // DARK / LIGHT ACTIVE GLASS
                   // ======================================================
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: widget.isDark
                         ? [
-                            Colors.white.withOpacity(0.20),
-                            Colors.white.withOpacity(0.08),
-                            Colors.white.withOpacity(0.04),
+                            Colors.white.withOpacity(0.105),
+                            Colors.white.withOpacity(0.045),
+                            Colors.white.withOpacity(0.020),
                           ]
                         : [
                             Colors.white.withOpacity(0.48),
@@ -426,7 +425,7 @@ class _LiquidGlassPillState extends State<_LiquidGlassPill>
 
                   border: Border.all(
                     color: widget.isDark
-                        ? Colors.white.withOpacity(0.25)
+                        ? Colors.white.withOpacity(0.12)
                         : Colors.white.withOpacity(0.70),
                     width: 1,
                   ),
@@ -434,7 +433,7 @@ class _LiquidGlassPillState extends State<_LiquidGlassPill>
                   boxShadow: [
                     BoxShadow(
                       color: widget.isDark
-                          ? Colors.white.withOpacity(0.07)
+                          ? Colors.white.withOpacity(0.025)
                           : Colors.white.withOpacity(0.45),
                       blurRadius: 12,
                       spreadRadius: -2,
@@ -442,7 +441,7 @@ class _LiquidGlassPillState extends State<_LiquidGlassPill>
                     ),
                     BoxShadow(
                       color: widget.isDark
-                          ? Colors.black.withOpacity(0.12)
+                          ? Colors.black.withOpacity(0.22)
                           : const Color(0xFF2563EB).withOpacity(0.08),
                       blurRadius: 14,
                       offset: const Offset(0, 5),
@@ -469,7 +468,7 @@ class _LiquidGlassPillState extends State<_LiquidGlassPill>
                               end: Alignment.bottomCenter,
                               colors: [
                                 Colors.white.withOpacity(
-                                  widget.isDark ? 0.20 : 0.58,
+                                  widget.isDark ? 0.055 : 0.58,
                                 ),
                                 Colors.white.withOpacity(0.00),
                               ],
@@ -494,7 +493,7 @@ class _LiquidGlassPillState extends State<_LiquidGlassPill>
                             gradient: LinearGradient(
                               colors: [
                                 Colors.white.withOpacity(
-                                  widget.isDark ? 0.08 : 0.42,
+                                  widget.isDark ? 0.025 : 0.42,
                                 ),
                                 Colors.white.withOpacity(0.00),
                               ],
@@ -519,7 +518,7 @@ class _LiquidGlassPillState extends State<_LiquidGlassPill>
                             gradient: LinearGradient(
                               colors: widget.isDark
                                   ? [
-                                      Colors.white.withOpacity(0.04),
+                                      Colors.white.withOpacity(0.015),
                                       Colors.transparent,
                                     ]
                                   : [
@@ -547,7 +546,6 @@ class _LiquidGlassPillState extends State<_LiquidGlassPill>
 // ============================================================================
 // NAVIGATION BUTTON
 // ============================================================================
-
 class _LiquidNavigationButton extends StatelessWidget {
   final _NavigationItem item;
   final bool selected;
@@ -564,7 +562,7 @@ class _LiquidNavigationButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final inactiveColor = isDark
-        ? Colors.white.withOpacity(0.58)
+        ? Colors.white.withOpacity(0.48)
         : const Color(0xFF64748B);
 
     final activeColor = isDark ? Colors.white : const Color(0xFF2563EB);
@@ -589,7 +587,7 @@ class _LiquidNavigationButton extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: selected
                     ? (isDark
-                          ? Colors.white.withOpacity(0.16)
+                          ? Colors.white.withOpacity(0.09)
                           : const Color(0xFF2563EB).withOpacity(0.08))
                     : Colors.transparent,
               ),
@@ -616,15 +614,18 @@ class _LiquidNavigationButton extends StatelessWidget {
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeOutCubic,
               style: TextStyle(
+                fontFamily: 'Poppins',
                 fontSize: selected ? 8.5 : 7.5,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 color: selected ? activeColor : inactiveColor,
                 letterSpacing: selected ? -0.05 : 0,
+                decoration: TextDecoration.none,
               ),
               child: Text(
                 item.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                style: const TextStyle(decoration: TextDecoration.none),
               ),
             ),
           ],

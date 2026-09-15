@@ -6,6 +6,8 @@ import 'package:absensi_app/models/dashboard_data.dart';
 import 'package:absensi_app/pages/faq_page.dart';
 import 'package:absensi_app/pages/main_page_controller.dart';
 import 'package:absensi_app/pages/pdf_view_page.dart';
+import 'package:absensi_app/models/berita.dart';
+import 'package:absensi_app/pages/detail_berita_page.dart';
 import 'package:absensi_app/services/api_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
@@ -13,6 +15,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+
+import 'cuti_page.dart';
+import 'berita_page.dart';
 
 class DashboardPage extends StatefulWidget {
   final int id_user;
@@ -44,6 +49,9 @@ class _DashboardPageState extends State<DashboardPage> {
   String _currentTime = "";
   int loadingProgress = 0;
 
+  List<Berita> berita = [];
+  bool isLoadingBerita = false;
+
   String formatTanggalIndonesia(String? tanggal) {
     if (tanggal == null) return '-';
 
@@ -68,11 +76,33 @@ class _DashboardPageState extends State<DashboardPage> {
     return DateFormat.MMMM('id').format(DateTime(2025, bulanAngka));
   }
 
+  String _formatBeritaDate(DateTime date) {
+    // 15 September 2026
+    const bulan = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+
+    return '${date.day} ${bulan[date.month - 1]} ${date.year}';
+  }
+
   @override
   void initState() {
     super.initState();
 
     _loadDashboard();
+    _loadBerita();
+
     _updateTime();
     _initFcmToken();
 
@@ -171,6 +201,34 @@ class _DashboardPageState extends State<DashboardPage> {
     setState(() {
       _currentTime = "$timeStr $suffix";
     });
+  }
+
+  Future<void> _loadBerita() async {
+    if (!mounted) return;
+
+    setState(() {
+      isLoadingBerita = true;
+    });
+
+    try {
+      final result = await ApiService.getBeritaPaginated(page: 1, perPage: 5);
+
+      if (!mounted) return;
+
+      setState(() {
+        berita = result;
+        isLoadingBerita = false;
+      });
+    } catch (e) {
+      debugPrint('Error load berita: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        berita = [];
+        isLoadingBerita = false;
+      });
+    }
   }
 
   void _showApiErrorPopup() {
@@ -326,10 +384,14 @@ class _DashboardPageState extends State<DashboardPage> {
                   const SizedBox(height: 12),
                   _buildAdminSchedule(isDark, fotoUrlAdminJadwal),
                 ],
-                const SizedBox(height: 12),
-                _buildSectionTitle("Menu Cepat", null, isDark),
+                // const SizedBox(height: 12),
+                // _buildSectionTitle("Menu Cepat", null, isDark),
                 const SizedBox(height: 7),
                 _buildQuickActions(context, isDark),
+                if (berita.isNotEmpty || isLoadingBerita) ...[
+                  const SizedBox(height: 14),
+                  _buildBeritaSection(isDark),
+                ],
               ],
             ),
           ),
@@ -457,6 +519,481 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBeritaCard({required Berita item, required bool isDark}) {
+    final imageUrl = item.gambar != null && item.gambar!.trim().isNotEmpty
+        ? '${ApiService.simrsUrl}/storage/${item.gambar!.trim()}'
+        : null;
+
+    final foregroundColor = isDark
+        ? CupertinoColors.white
+        : const Color(0xFF111827);
+
+    final secondaryColor = isDark
+        ? const Color(0xFF9CA3AF)
+        : const Color(0xFF6B7280);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        Navigator.of(context).push(
+          CupertinoPageRoute(
+            builder: (_) => DetailBeritaPage(beritaId: item.id),
+          ),
+        );
+      },
+      child: SizedBox(
+        width: 285,
+        height: 300,
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF11161F) : CupertinoColors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isDark ? const Color(0xFF202631) : const Color(0xFFE7EBF2),
+            ),
+            boxShadow: isDark
+                ? null
+                : [
+                    BoxShadow(
+                      color: const Color(0xFF1F2937).withOpacity(0.05),
+                      blurRadius: 18,
+                      offset: const Offset(0, 7),
+                    ),
+                  ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ==========================================================
+              // GAMBAR
+              // ==========================================================
+              SizedBox(
+                height: 165,
+                width: double.infinity,
+                child: imageUrl != null
+                    ? CachedNetworkImage(
+                        imageUrl: imageUrl,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) {
+                          return Container(
+                            color: isDark
+                                ? const Color(0xFF171D27)
+                                : const Color(0xFFEFF3F8),
+                            child: const Center(
+                              child: CupertinoActivityIndicator(),
+                            ),
+                          );
+                        },
+                        errorWidget: (context, url, error) {
+                          return _buildBeritaImagePlaceholder(isDark: isDark);
+                        },
+                      )
+                    : _buildBeritaImagePlaceholder(isDark: isDark),
+              ),
+
+              // ==========================================================
+              // CONTENT
+              // ==========================================================
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 9),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ==================================================
+                      // TANGGAL
+                      // ==================================================
+                      if (item.publishedAt != null)
+                        Text(
+                          _formatBeritaDate(item.publishedAt!),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            color: secondaryColor,
+                            decoration: TextDecoration.none,
+                            height: 1.2,
+                          ),
+                        ),
+
+                      const SizedBox(height: 5),
+
+                      // ==================================================
+                      // JUDUL
+                      // ==================================================
+                      Text(
+                        item.judul,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: true,
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: foregroundColor,
+                          decoration: TextDecoration.none,
+                          height: 1.25,
+                        ),
+                      ),
+
+                      // ==================================================
+                      // RINGKASAN
+                      // ==================================================
+                      if (item.ringkasan != null &&
+                          item.ringkasan!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 5),
+                        Text(
+                          item.ringkasan!.trim(),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: true,
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w400,
+                            color: secondaryColor,
+                            decoration: TextDecoration.none,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+
+                      // ==================================================
+                      // JARAK KE FOOTER
+                      // ==================================================
+                      const Spacer(),
+
+                      // ==================================================
+                      // FOOTER
+                      // ==================================================
+                      Row(
+                        children: [
+                          Icon(
+                            CupertinoIcons.person,
+                            size: 12,
+                            color: secondaryColor,
+                          ),
+
+                          const SizedBox(width: 4),
+
+                          Expanded(
+                            child: Text(
+                              item.penulis?.trim().isNotEmpty == true
+                                  ? item.penulis!.trim()
+                                  : 'Admin',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 10,
+                                fontWeight: FontWeight.w400,
+                                color: secondaryColor,
+                                decoration: TextDecoration.none,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(width: 8),
+
+                          Icon(
+                            CupertinoIcons.eye,
+                            size: 12,
+                            color: secondaryColor,
+                          ),
+
+                          const SizedBox(width: 4),
+
+                          Text(
+                            '${item.views}',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 10,
+                              fontWeight: FontWeight.w400,
+                              color: secondaryColor,
+                              decoration: TextDecoration.none,
+                              height: 1.2,
+                            ),
+                          ),
+
+                          const SizedBox(width: 8),
+
+                          Icon(
+                            CupertinoIcons.chevron_right,
+                            size: 13,
+                            color: secondaryColor,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLihatSemuaBeritaCard({required bool isDark}) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        Navigator.of(
+          context,
+        ).push(CupertinoPageRoute(builder: (_) => const BeritaPage()));
+      },
+      child: Container(
+        width: 150,
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF11161F) : CupertinoColors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark ? const Color(0xFF202631) : const Color(0xFFE7EBF2),
+          ),
+        ),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.activeBlue.withOpacity(
+                      isDark ? 0.14 : 0.08,
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    CupertinoIcons.arrow_right,
+                    size: 22,
+                    color: CupertinoColors.activeBlue,
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                Text(
+                  'Lihat semua',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: isDark
+                        ? CupertinoColors.white
+                        : const Color(0xFF111827),
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+
+                const SizedBox(height: 3),
+
+                Text(
+                  'Berita lainnya',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w400,
+                    color: isDark
+                        ? const Color(0xFF9CA3AF)
+                        : const Color(0xFF6B7280),
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBeritaImagePlaceholder({required bool isDark}) {
+    return Container(
+      height: 125,
+      width: double.infinity,
+      color: isDark ? const Color(0xFF171D27) : const Color(0xFFEFF3F8),
+      child: Center(
+        child: Icon(
+          CupertinoIcons.news,
+          size: 32,
+          color: isDark ? const Color(0xFF4B5563) : const Color(0xFF9CA3AF),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBeritaSection(bool isDark) {
+    if (isLoadingBerita) {
+      return SizedBox(
+        height: 185,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            color: isDark ? Colors.white.withOpacity(0.055) : Colors.white,
+            child: const Center(child: CupertinoActivityIndicator()),
+          ),
+        ),
+      );
+    }
+
+    if (berita.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle("Berita Digital", null, isDark),
+
+        const SizedBox(height: 8),
+
+        _buildBeritaCarousel(isDark: isDark),
+
+        // SizedBox(
+        //   height: 190,
+        //   child: PageView.builder(
+        //     controller: PageController(viewportFraction: 0.91),
+        //     itemCount: berita.length,
+        //     padEnds: false,
+        //     itemBuilder: (context, index) {
+        //       final item = berita[index];
+
+        //       return Padding(
+        //         padding: EdgeInsets.only(
+        //           right: index == berita.length - 1 ? 0 : 10,
+        //         ),
+        //         child: _buildBeritaCard(item, isDark),
+        //       );
+        //     },
+        //   ),
+        // ),
+      ],
+    );
+  }
+
+  Widget _buildBeritaCarousel({required bool isDark}) {
+    if (isLoadingBerita) {
+      return const SizedBox(
+        height: 275,
+        child: Center(child: CupertinoActivityIndicator()),
+      );
+    }
+
+    if (berita.isEmpty) {
+      return _buildBeritaEmpty(isDark: isDark);
+    }
+
+    return SizedBox(
+      height: 300,
+      child: ListView.separated(
+        padding: EdgeInsets.zero,
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: berita.length + 1,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (context, index) {
+          if (index == berita.length) {
+            return _buildLihatSemuaBeritaCard(isDark: isDark);
+          }
+
+          return _buildBeritaCard(item: berita[index], isDark: isDark);
+        },
+      ),
+    );
+  }
+
+  Widget _buildBeritaEmpty({required bool isDark}) {
+    final foregroundColor = isDark
+        ? CupertinoColors.white
+        : const Color(0xFF111827);
+
+    final secondaryColor = isDark
+        ? const Color(0xFF9CA3AF)
+        : const Color(0xFF6B7280);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: CupertinoColors.activeBlue.withOpacity(
+                  isDark ? 0.12 : 0.08,
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                CupertinoIcons.news,
+                size: 32,
+                color: CupertinoColors.activeBlue,
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            Text(
+              'Belum Ada Berita',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: foregroundColor,
+                decoration: TextDecoration.none,
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            Text(
+              'Belum ada berita digital yang tersedia saat ini.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 11,
+                fontWeight: FontWeight.w400,
+                color: secondaryColor,
+                height: 1.45,
+                decoration: TextDecoration.none,
+              ),
+            ),
+
+            const SizedBox(height: 18),
+
+            CupertinoButton.filled(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              borderRadius: BorderRadius.circular(14),
+              onPressed: _loadBerita,
+              child: const Text(
+                'Muat Ulang',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -778,7 +1315,7 @@ class _DashboardPageState extends State<DashboardPage> {
     bool isDark,
   ) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 5),
       decoration: BoxDecoration(
         color: isDark ? Colors.white.withOpacity(0.055) : Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -796,33 +1333,41 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 30,
-            height: 30,
+            width: 28,
+            height: 28,
             decoration: BoxDecoration(
               color: color.withOpacity(0.10),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 15, color: color),
+            child: Icon(icon, size: 14, color: color),
           ),
 
-          const SizedBox(height: 5),
+          const SizedBox(height: 3),
 
           if (isRetrying)
-            const CupertinoActivityIndicator(radius: 6)
+            const SizedBox(
+              height: 17,
+              child: CupertinoActivityIndicator(radius: 6),
+            )
           else
             Text(
               "${value ?? 'x'}x",
               maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 15,
+                fontFamily: 'Poppins',
+                fontSize: 14,
+                height: 1.1,
                 color: isDark ? Colors.white : const Color(0xFF172033),
                 fontWeight: FontWeight.w800,
+                decoration: TextDecoration.none,
               ),
             ),
 
-          const SizedBox(height: 2),
+          const SizedBox(height: 1),
 
           Text(
             title,
@@ -830,9 +1375,12 @@ class _DashboardPageState extends State<DashboardPage> {
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 10,
+              fontFamily: 'Poppins',
+              fontSize: 9,
+              height: 1.1,
               color: isDark ? Colors.white54 : const Color(0xFF7A8699),
               fontWeight: FontWeight.w500,
+              decoration: TextDecoration.none,
             ),
           ),
         ],
@@ -1032,32 +1580,17 @@ class _DashboardPageState extends State<DashboardPage> {
               },
             );
 
-          default:
+          case 3:
             return _buildQuickAction(
-              title: "Berita",
-              icon: CupertinoIcons.news,
-              color: const Color(0xFF0D9488),
+              title: "Cuti",
+              icon: CupertinoIcons.calendar_badge_plus,
+              color: const Color(0xFF7C3AED),
               isDark: isDark,
               onTap: () {
-                showCupertinoDialog(
-                  context: context,
-                  builder: (dialogContext) {
-                    return CupertinoAlertDialog(
-                      title: const Text("Fitur belum tersedia!"),
-                      content: const Text(
-                        "Fitur Berita Terkini masih dalam proses pengembangan oleh Developer. Mohon tunggu update berikutnya 😊",
-                      ),
-                      actions: [
-                        CupertinoDialogAction(
-                          isDefaultAction: true,
-                          child: const Text("Tutup"),
-                          onPressed: () {
-                            Navigator.of(dialogContext).pop();
-                          },
-                        ),
-                      ],
-                    );
-                  },
+                Navigator.of(context).push(
+                  CupertinoPageRoute(
+                    builder: (_) => CutiPage(idUser: widget.id_user),
+                  ),
                 );
               },
             );

@@ -117,6 +117,42 @@ class _FaqPageState extends State<FaqPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // ============================================================
+          // TOMBOL KEMBALI
+          // ============================================================
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            minSize: 0,
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? CupertinoColors.white.withOpacity(0.07)
+                    : CupertinoColors.white.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isDark
+                      ? CupertinoColors.white.withOpacity(0.07)
+                      : CupertinoColors.white.withOpacity(0.95),
+                ),
+              ),
+              child: Icon(
+                CupertinoIcons.chevron_left,
+                size: 20,
+                color: isDark ? CupertinoColors.white : const Color(0xFF1F2937),
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 12),
+
+          // ============================================================
+          // JUDUL
+          // ============================================================
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -150,6 +186,9 @@ class _FaqPageState extends State<FaqPage> {
 
           const SizedBox(width: 12),
 
+          // ============================================================
+          // TOMBOL REFRESH
+          // ============================================================
           CupertinoButton(
             padding: EdgeInsets.zero,
             minSize: 0,
@@ -168,7 +207,7 @@ class _FaqPageState extends State<FaqPage> {
                       : const Color(0xFFE7EAF0),
                 ),
               ),
-              child: Icon(
+              child: const Icon(
                 CupertinoIcons.refresh,
                 size: 18,
                 color: CupertinoColors.activeBlue,

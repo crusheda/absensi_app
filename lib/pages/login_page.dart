@@ -240,275 +240,250 @@ class _LoginPageState extends State<LoginPage>
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>(
-      builder: (context, themeProvider, _) {
-        final isDark = themeProvider.isDarkMode;
+    final themeProvider = context.watch<ThemeProvider>();
+    final isDark = themeProvider.isDarkMode;
 
-        final backgroundColor = isDark
-            ? const Color(0xFF080A0F)
-            : const Color(0xFFF5F7FA);
+    final backgroundColor = isDark
+        ? const Color(0xFF080A0F)
+        : const Color(0xFFF5F7FA);
 
-        final cardColor = isDark
-            ? const Color(0xFF11151C)
-            : CupertinoColors.white;
+    final cardColor = isDark ? const Color(0xFF11151C) : CupertinoColors.white;
 
-        final textColor = isDark
-            ? CupertinoColors.white
-            : const Color(0xFF111827);
+    final textColor = isDark ? CupertinoColors.white : const Color(0xFF111827);
 
-        final secondaryColor = isDark
-            ? const Color(0xFF9CA3AF)
-            : const Color(0xFF6B7280);
+    final secondaryColor = isDark
+        ? const Color(0xFF9CA3AF)
+        : const Color(0xFF6B7280);
 
-        return CupertinoPageScaffold(
-          backgroundColor: backgroundColor,
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: _AnimatedBackground(isDark: isDark),
-                ),
-              ),
+    return CupertinoPageScaffold(
+      backgroundColor: backgroundColor,
+      child: Stack(
+        children: [
+          // ==============================================================
+          // ANIMATED BACKGROUND
+          // ==============================================================
+          Positioned.fill(
+            child: IgnorePointer(child: _AnimatedBackground(isDark: isDark)),
+          ),
 
-              // ============================================================
-              // HEADER
-              // ============================================================
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        ScaleTransition(
-                          scale: _logoAnimation,
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isDark
-                                  ? const Color(0xFF151A22)
-                                  : CupertinoColors.white,
-                              border: Border.all(
-                                color: isDark
-                                    ? const Color(0xFF293140)
-                                    : const Color(0xFFE5E7EB),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: CupertinoColors.activeBlue.withOpacity(
-                                    0.12,
-                                  ),
-                                  blurRadius: 14,
-                                  offset: const Offset(0, 5),
-                                ),
-                              ],
-                            ),
-                            child: ClipOval(
-                              child: Image.asset(
-                                'assets/logo/logo_clear_100kb.png',
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                        ),
+          // ==============================================================
+          // CONTENT
+          // ==============================================================
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final height = constraints.maxHeight;
+                final width = constraints.maxWidth;
 
-                        _buildThemeButton(
-                          themeProvider: themeProvider,
-                          isDark: isDark,
-                          secondaryColor: secondaryColor,
-                        ),
-                      ],
+                final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
+
+                final keyboardVisible = keyboardHeight > 0;
+
+                final isSmallHeight = height < 700;
+
+                final isVerySmallHeight = height < 600;
+
+                final horizontalPadding = width < 360 ? 16.0 : 22.0;
+
+                final contentWidth = width < 430
+                    ? width - (horizontalPadding * 2)
+                    : 400.0;
+
+                final contentTop = keyboardVisible
+                    ? 4.0
+                    : isVerySmallHeight
+                    ? 4.0
+                    : isSmallHeight
+                    ? 8.0
+                    : 14.0;
+
+                final contentBottom = keyboardVisible ? 24.0 : 8.0;
+
+                return SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  physics: const ClampingScrollPhysics(),
+                  padding: EdgeInsets.only(bottom: contentBottom),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
                     ),
-                  ),
-                ),
-              ),
-
-              // ============================================================
-              // CONTENT
-              // ============================================================
-              SafeArea(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final height = constraints.maxHeight;
-                    final width = constraints.maxWidth;
-
-                    final bool isSmallHeight = height < 700;
-                    final bool isVerySmallHeight = height < 600;
-
-                    final double horizontalPadding = width < 360 ? 16 : 22;
-
-                    final double contentWidth = width < 430
-                        ? width - (horizontalPadding * 2)
-                        : 400;
-
-                    /*
-                     * Design height adalah tinggi natural seluruh konten
-                     * login pada kondisi normal.
-                     *
-                     * FittedBox hanya melakukan scaleDown apabila konten
-                     * tidak cukup tinggi.
-                     *
-                     * Jadi:
-                     * - layar normal = ukuran normal
-                     * - layar pendek = mengecil secukupnya
-                     * - tidak scroll
-                     * - tidak overflow
-                     */
-                    final double availableHeight = constraints.maxHeight - 10;
-
-                    final double designHeight = isVerySmallHeight
-                        ? 500
-                        : isSmallHeight
-                        ? 550
-                        : 600;
-
-                    final double scale = availableHeight < designHeight
-                        ? availableHeight / designHeight
-                        : 1.0;
-
-                    final double safeScale = scale.clamp(0.78, 1.0);
-
-                    final double contentTop = isVerySmallHeight
-                        ? 4
-                        : isSmallHeight
-                        ? 8
-                        : 14;
-
-                    return SizedBox(
-                      width: double.infinity,
-                      height: constraints.maxHeight,
-                      child: Center(
-                        child: Transform.scale(
-                          scale: safeScale,
-                          alignment: Alignment.center,
-                          child: SizedBox(
-                            width: contentWidth,
-                            child: Padding(
-                              padding: EdgeInsets.only(
-                                top: contentTop,
-                                bottom: 4,
+                    child: Center(
+                      child: SizedBox(
+                        width: contentWidth,
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(0, contentTop, 0, 8),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // ==================================================
+                              // BRAND
+                              // ==================================================
+                              FadeTransition(
+                                opacity: _fadeAnimation,
+                                child: _buildBrand(
+                                  isDark: isDark,
+                                  textColor: textColor,
+                                  secondaryColor: secondaryColor,
+                                  compact: isVerySmallHeight || isSmallHeight,
+                                ),
                               ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // ==================================================
-                                  // BRAND
-                                  // ==================================================
-                                  FadeTransition(
-                                    opacity: _fadeAnimation,
-                                    child: _buildBrand(
-                                      isDark: isDark,
-                                      textColor: textColor,
-                                      secondaryColor: secondaryColor,
-                                      compact:
-                                          isVerySmallHeight || isSmallHeight,
-                                    ),
-                                  ),
 
-                                  SizedBox(
-                                    height: isVerySmallHeight
-                                        ? 10
-                                        : isSmallHeight
-                                        ? 14
-                                        : 20,
-                                  ),
-
-                                  // ==================================================
-                                  // LOGIN CARD
-                                  // ==================================================
-                                  SlideTransition(
-                                    position: _formAnimation,
-                                    child: FadeTransition(
-                                      opacity: _fadeAnimation,
-                                      child: _buildLoginCard(
-                                        isDark: isDark,
-                                        cardColor: cardColor,
-                                        textColor: textColor,
-                                        secondaryColor: secondaryColor,
-                                        compact:
-                                            isVerySmallHeight || isSmallHeight,
-                                        padding: isVerySmallHeight
-                                            ? 13
-                                            : isSmallHeight
-                                            ? 15
-                                            : 18,
-                                      ),
-                                    ),
-                                  ),
-
-                                  SizedBox(
-                                    height: isVerySmallHeight
-                                        ? 8
-                                        : isSmallHeight
-                                        ? 10
-                                        : 14,
-                                  ),
-
-                                  // ==================================================
-                                  // INFORMATION CARD
-                                  // ==================================================
-                                  SlideTransition(
-                                    position: _infoAnimation,
-                                    child: FadeTransition(
-                                      opacity: _fadeAnimation,
-                                      child: _buildInformationCard(
-                                        isDark: isDark,
-                                        cardColor: cardColor,
-                                        textColor: textColor,
-                                        secondaryColor: secondaryColor,
-                                        compact:
-                                            isVerySmallHeight || isSmallHeight,
-                                      ),
-                                    ),
-                                  ),
-
-                                  SizedBox(
-                                    height: isVerySmallHeight
-                                        ? 7
-                                        : isSmallHeight
-                                        ? 9
-                                        : 16,
-                                  ),
-
-                                  // ==================================================
-                                  // VERSION
-                                  // ==================================================
-                                  FadeTransition(
-                                    opacity: _fadeAnimation,
-                                    child: Text(
-                                      _appVersion,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontFamily: 'Poppins',
-                                        fontSize: isVerySmallHeight ? 8 : 9.5,
-                                        fontWeight: FontWeight.w500,
-                                        color: secondaryColor,
-                                        decoration: TextDecoration.none,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              SizedBox(
+                                height: isVerySmallHeight
+                                    ? 10
+                                    : isSmallHeight
+                                    ? 14
+                                    : 20,
                               ),
-                            ),
+
+                              // ==================================================
+                              // LOGIN CARD
+                              // ==================================================
+                              SlideTransition(
+                                position: _formAnimation,
+                                child: FadeTransition(
+                                  opacity: _fadeAnimation,
+                                  child: _buildLoginCard(
+                                    isDark: isDark,
+                                    cardColor: cardColor,
+                                    textColor: textColor,
+                                    secondaryColor: secondaryColor,
+                                    compact: isVerySmallHeight || isSmallHeight,
+                                    padding: isVerySmallHeight
+                                        ? 13
+                                        : isSmallHeight
+                                        ? 15
+                                        : 18,
+                                  ),
+                                ),
+                              ),
+
+                              SizedBox(
+                                height: isVerySmallHeight
+                                    ? 8
+                                    : isSmallHeight
+                                    ? 10
+                                    : 14,
+                              ),
+
+                              // ==================================================
+                              // INFORMATION CARD
+                              // ==================================================
+                              SlideTransition(
+                                position: _infoAnimation,
+                                child: FadeTransition(
+                                  opacity: _fadeAnimation,
+                                  child: _buildInformationCard(
+                                    isDark: isDark,
+                                    cardColor: cardColor,
+                                    textColor: textColor,
+                                    secondaryColor: secondaryColor,
+                                    compact: isVerySmallHeight || isSmallHeight,
+                                  ),
+                                ),
+                              ),
+
+                              SizedBox(
+                                height: isVerySmallHeight
+                                    ? 7
+                                    : isSmallHeight
+                                    ? 9
+                                    : 16,
+                              ),
+
+                              // ==================================================
+                              // VERSION
+                              // ==================================================
+                              FadeTransition(
+                                opacity: _fadeAnimation,
+                                child: Text(
+                                  _appVersion,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: isVerySmallHeight ? 8 : 9.5,
+                                    fontWeight: FontWeight.w500,
+                                    color: secondaryColor,
+                                    decoration: TextDecoration.none,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                    );
-                  },
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // ==============================================================
+          // HEADER
+          // PENTING: HEADER DILETAKKAN PALING TERAKHIR
+          // AGAR SELALU BERADA DI ATAS CONTENT / HIT-TEST
+          // ==============================================================
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    ScaleTransition(
+                      scale: _logoAnimation,
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isDark
+                              ? const Color(0xFF151A22)
+                              : CupertinoColors.white,
+                          border: Border.all(
+                            color: isDark
+                                ? const Color(0xFF293140)
+                                : const Color(0xFFE5E7EB),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: CupertinoColors.activeBlue.withOpacity(
+                                0.12,
+                              ),
+                              blurRadius: 14,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/logo/logo_clear_100kb.png',
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    _buildThemeButton(
+                      themeProvider: themeProvider,
+                      isDark: isDark,
+                      secondaryColor: secondaryColor,
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -1059,7 +1034,6 @@ class _LoginPageState extends State<LoginPage>
   // ========================================================================
   // THEME BUTTON
   // ========================================================================
-
   Widget _buildThemeButton({
     required ThemeProvider themeProvider,
     required bool isDark,
@@ -1087,9 +1061,15 @@ class _LoginPageState extends State<LoginPage>
         children: [
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 220),
+            transitionBuilder: (child, animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: ScaleTransition(scale: animation, child: child),
+              );
+            },
             child: Icon(
               isDark ? CupertinoIcons.moon_fill : CupertinoIcons.sun_max_fill,
-              key: ValueKey(isDark),
+              key: ValueKey<bool>(isDark),
               size: 14,
               color: isDark ? const Color(0xFFA5B4FC) : const Color(0xFFF59E0B),
             ),
@@ -1099,10 +1079,10 @@ class _LoginPageState extends State<LoginPage>
 
           CupertinoSwitch(
             value: isDark,
-            onChanged: (value) async {
-              await themeProvider.toggleTheme(value);
-            },
             activeTrackColor: CupertinoColors.activeBlue,
+            onChanged: (value) {
+              themeProvider.toggleTheme(value);
+            },
           ),
         ],
       ),

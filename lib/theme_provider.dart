@@ -14,16 +14,21 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
 
     final prefs = await SharedPreferences.getInstance();
+
     await prefs.setBool('isDarkMode', isOn);
   }
 
   Future<void> loadTheme() async {
-    final prefs = await SharedPreferences.getInstance();
+    try {
+      final prefs = await SharedPreferences.getInstance();
 
-    final isDark = prefs.getBool('isDarkMode') ?? false;
+      final isDark = prefs.getBool('isDarkMode') ?? false;
 
-    _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
+      _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
 
-    notifyListeners();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('❌ THEME: Gagal load theme: $e');
+    }
   }
 }

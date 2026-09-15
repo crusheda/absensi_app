@@ -238,7 +238,7 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
           ),
           const SizedBox(width: 5),
           Text(
-            'ID#$id',
+            '$id',
             style: TextStyle(
               fontFamily: 'Poppins',
               fontSize: 10.5,
@@ -958,7 +958,6 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
   // ============================================================
   // BUILD
   // ============================================================
-
   @override
   Widget build(BuildContext context) {
     final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
@@ -967,157 +966,167 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
       backgroundColor: isDark
           ? const Color(0xFF080B12)
           : const Color(0xFFF5F8FF),
-      child: Stack(
-        children: [
-          // ========================================================
-          // BACKGROUND
-          // ========================================================
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: isDark
-                      ? const [Color(0xFF080B12), Color(0xFF111827)]
-                      : const [Color(0xFFF1F6FF), Color(0xFFFFFFFF)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+      child: DefaultTextStyle.merge(
+        style: const TextStyle(decoration: TextDecoration.none),
+        child: Stack(
+          children: [
+            // ========================================================
+            // BACKGROUND
+            // ========================================================
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isDark
+                        ? const [Color(0xFF080B12), Color(0xFF111827)]
+                        : const [Color(0xFFF1F6FF), Color(0xFFFFFFFF)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                 ),
               ),
             ),
-          ),
 
-          // ========================================================
-          // CONTENT
-          // ========================================================
-          Positioned.fill(
-            child: SafeArea(
-              bottom: false,
-              child: isLoading
-                  ? _buildLoadingState(isDark)
-                  : isError || absensiDetail == null
-                  ? _buildErrorState(isDark)
-                  : Column(
-                      children: [
-                        // Header
-                        _buildHeader(isDark),
+            // ========================================================
+            // CONTENT
+            // ========================================================
+            Positioned.fill(
+              child: SafeArea(
+                bottom: false,
+                child: isLoading
+                    ? _buildLoadingState(isDark)
+                    : isError || absensiDetail == null
+                    ? _buildErrorState(isDark)
+                    : Column(
+                        children: [
+                          // Header
+                          _buildHeader(isDark),
 
-                        // Badge
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-                          child: Row(
-                            children: [
-                              _buildIdBadge(absensiDetail!['id'], isDark),
-                              const SizedBox(width: 7),
-                              Flexible(
-                                child: _buildJenisBadge(
-                                  absensiDetail!['jenis']?.toString() ?? '',
+                          // Badge
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                            child: Row(
+                              children: [
+                                _buildIdBadge(absensiDetail!['id'], isDark),
+                                const SizedBox(width: 7),
+                                Flexible(
+                                  child: _buildJenisBadge(
+                                    absensiDetail!['jenis']?.toString() ?? '',
+                                    isDark,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Scroll content
+                          Expanded(
+                            child: ListView(
+                              physics: const BouncingScrollPhysics(),
+                              padding: const EdgeInsets.fromLTRB(20, 2, 20, 35),
+                              children: [
+                                // ==================================================
+                                // BERANGKAT
+                                // ==================================================
+                                _buildAttendanceCard(
+                                  isDark: isDark,
+                                  title: 'Berangkat',
+                                  latlong:
+                                      absensiDetail!['latlong_in']
+                                          ?.toString() ??
+                                      '',
+                                  shift:
+                                      'Jaga ${absensiDetail!['shift'] ?? ''}',
+                                  date:
+                                      absensiDetail!['tgl_in']?.toString() ??
+                                      '-',
+                                  time:
+                                      absensiDetail!['jam_in']?.toString() ??
+                                      '-',
+                                  infoTitle1: 'Keterlambatan',
+                                  infoValue1:
+                                      absensiDetail!['terlambat']?.toString() ??
+                                      '-',
+                                  accentColor: CupertinoColors.activeGreen,
+                                ),
+
+                                const SizedBox(height: 12),
+
+                                // ==================================================
+                                // PULANG
+                                // ==================================================
+                                _buildAttendanceCard(
+                                  isDark: isDark,
+                                  title: 'Pulang',
+                                  latlong:
+                                      absensiDetail!['latlong_out']
+                                          ?.toString() ??
+                                      '',
+                                  date:
+                                      absensiDetail!['tgl_out']?.toString() ??
+                                      '-',
+                                  time:
+                                      absensiDetail!['jam_out']?.toString() ??
+                                      '-',
+                                  infoTitle2: 'Bekerja Selama',
+                                  infoValue2:
+                                      absensiDetail!['durasi_kerja']
+                                          ?.toString() ??
+                                      '-',
+                                  lemburTitle: 'Lembur Selama',
+                                  lemburValue:
+                                      absensiDetail!['lembur']?.toString() ??
+                                      '',
+                                  accentColor: CupertinoColors.systemRed,
+                                ),
+
+                                const SizedBox(height: 12),
+
+                                // ==================================================
+                                // FOTO
+                                // ==================================================
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: _buildMiniPhotoBox(
+                                        label: 'Foto Berangkat',
+                                        imageUrl: absensiDetail!['foto_in'],
+                                        index: 0,
+                                        isDark: isDark,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: _buildMiniPhotoBox(
+                                        label: 'Foto Pulang',
+                                        imageUrl: absensiDetail!['foto_out'],
+                                        index: 1,
+                                        isDark: isDark,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 12),
+
+                                // ==================================================
+                                // KETERANGAN
+                                // ==================================================
+                                _buildKeteranganBox(
+                                  absensiDetail!['keterangan']?.toString() ??
+                                      '',
                                   isDark,
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-
-                        // Scroll content
-                        Expanded(
-                          child: ListView(
-                            physics: const BouncingScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(20, 2, 20, 35),
-                            children: [
-                              // ==================================================
-                              // BERANGKAT
-                              // ==================================================
-                              _buildAttendanceCard(
-                                isDark: isDark,
-                                title: 'Berangkat',
-                                latlong:
-                                    absensiDetail!['latlong_in']?.toString() ??
-                                    '',
-                                shift: 'Jaga ${absensiDetail!['shift'] ?? ''}',
-                                date:
-                                    absensiDetail!['tgl_in']?.toString() ?? '-',
-                                time:
-                                    absensiDetail!['jam_in']?.toString() ?? '-',
-                                infoTitle1: 'Keterlambatan',
-                                infoValue1:
-                                    absensiDetail!['terlambat']?.toString() ??
-                                    '-',
-                                accentColor: CupertinoColors.activeGreen,
-                              ),
-
-                              const SizedBox(height: 12),
-
-                              // ==================================================
-                              // PULANG
-                              // ==================================================
-                              _buildAttendanceCard(
-                                isDark: isDark,
-                                title: 'Pulang',
-                                latlong:
-                                    absensiDetail!['latlong_out']?.toString() ??
-                                    '',
-                                date:
-                                    absensiDetail!['tgl_out']?.toString() ??
-                                    '-',
-                                time:
-                                    absensiDetail!['jam_out']?.toString() ??
-                                    '-',
-                                infoTitle2: 'Bekerja Selama',
-                                infoValue2:
-                                    absensiDetail!['durasi_kerja']
-                                        ?.toString() ??
-                                    '-',
-                                lemburTitle: 'Lembur Selama',
-                                lemburValue:
-                                    absensiDetail!['lembur']?.toString() ?? '',
-                                accentColor: CupertinoColors.systemRed,
-                              ),
-
-                              const SizedBox(height: 12),
-
-                              // ==================================================
-                              // FOTO
-                              // ==================================================
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: _buildMiniPhotoBox(
-                                      label: 'Foto Berangkat',
-                                      imageUrl: absensiDetail!['foto_in'],
-                                      index: 0,
-                                      isDark: isDark,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: _buildMiniPhotoBox(
-                                      label: 'Foto Pulang',
-                                      imageUrl: absensiDetail!['foto_out'],
-                                      index: 1,
-                                      isDark: isDark,
-                                    ),
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 12),
-
-                              // ==================================================
-                              // KETERANGAN
-                              // ==================================================
-                              _buildKeteranganBox(
-                                absensiDetail!['keterangan']?.toString() ?? '',
-                                isDark,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

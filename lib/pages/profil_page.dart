@@ -111,6 +111,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   context,
                   foregroundColor: foregroundColor,
                   secondaryColor: secondaryColor,
+                  isDark: isDark,
                 ),
 
                 Expanded(
@@ -163,25 +164,36 @@ class _ProfilePageState extends State<ProfilePage> {
     BuildContext context, {
     required Color foregroundColor,
     required Color secondaryColor,
+    required bool isDark,
   }) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            behavior: HitTestBehavior.opaque,
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            minSize: 0,
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
             child: Container(
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: CupertinoColors.systemGrey6,
+                color: isDark
+                    ? CupertinoColors.white.withOpacity(0.07)
+                    : CupertinoColors.white.withOpacity(0.9),
                 borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isDark
+                      ? CupertinoColors.white.withOpacity(0.07)
+                      : CupertinoColors.white.withOpacity(0.95),
+                ),
               ),
               child: Icon(
-                CupertinoIcons.chevron_back,
-                size: 18,
-                color: foregroundColor,
+                CupertinoIcons.chevron_left,
+                size: 20,
+                color: isDark ? CupertinoColors.white : const Color(0xFF1F2937),
               ),
             ),
           ),

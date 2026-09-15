@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as path;
@@ -9,13 +10,19 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dart_ipify/dart_ipify.dart';
 
+import '../models/berita.dart';
+
 class ApiService {
   // Ganti sesuai URL API Laravel kamu
-  static const String baseUrl = "http://192.168.254.80:8000/api";
+
+  static const String baseUrl = "https://absensi.simrsmu.com/api";
   // static const String baseUrl = "http://172.16.1.36:8000/api";
-  // static const String baseUrl = "http://192.168.1.35:8000/api";
-  // static const String baseUrl = "https://absensi.simrsmu.com/api";
+
   static const String simrsUrl = "https://simrsmu.com";
+  // static const String simrsUrl = "http://172.16.1.36:8001";
+
+  static const String simrsUrlApi = "https://simrsmu.com/api";
+  // static const String simrsUrlApi = "http://172.16.1.36:8001/api";
 
   static Future<LatLng> getLokasiKantor() async {
     final response = await http.get(Uri.parse('$baseUrl/lokasi-kantor'));
@@ -45,6 +52,128 @@ class ApiService {
     } else {
       throw Exception('Gagal memuat FAQ');
     }
+  }
+
+  static Future<List<Berita>> getBerita() async {
+    final response = await http
+        .get(
+          Uri.parse('$simrsUrlApi/v4/berita'),
+          headers: {'Accept': 'application/json'},
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode != 200) {
+      throw Exception('Gagal memuat berita');
+    }
+
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('Response berita tidak valid');
+    }
+
+    final data = decoded['data'];
+
+    if (data is! List) {
+      return [];
+    }
+
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map((item) => Berita.fromJson(item))
+        .toList();
+  }
+
+  static Future<Berita> getDetailBerita(int id) async {
+    final response = await http
+        .get(
+          Uri.parse('$simrsUrlApi/v4/berita/$id'),
+          headers: {'Accept': 'application/json'},
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode != 200) {
+      throw Exception('Gagal memuat detail berita');
+    }
+
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('Response detail berita tidak valid');
+    }
+
+    final data = decoded['data'];
+
+    if (data is! Map<String, dynamic>) {
+      throw Exception('Data berita tidak ditemukan');
+    }
+
+    return Berita.fromJson(data);
+  }
+
+  static Future<List<Berita>> getBeritaPaginated({
+    int page = 1,
+    int perPage = 10,
+  }) async {
+    final response = await http
+        .get(
+          Uri.parse('$simrsUrlApi/v4/berita?page=$page&per_page=$perPage'),
+          headers: {'Accept': 'application/json'},
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode != 200) {
+      throw Exception('Gagal memuat berita (${response.statusCode})');
+    }
+
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('Response berita tidak valid');
+    }
+
+    if (decoded['success'] != true) {
+      throw Exception(decoded['message']?.toString() ?? 'Gagal memuat berita');
+    }
+
+    final data = decoded['data'];
+
+    if (data is! List) {
+      return [];
+    }
+
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map((item) => Berita.fromJson(item))
+        .toList();
+  }
+
+  static Future<Map<String, dynamic>> getCuti({
+    required int idUser,
+    required int tahun,
+  }) async {
+    final response = await http.get(
+      Uri.parse('$simrsUrlApi/v4/cuti/$idUser?tahun=$tahun'),
+      headers: {'Accept': 'application/json'},
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Gagal mengambil data cuti (${response.statusCode})');
+    }
+
+    final result = jsonDecode(response.body);
+
+    if (result is! Map<String, dynamic>) {
+      throw Exception('Format response cuti tidak valid.');
+    }
+
+    if (result['success'] != true) {
+      throw Exception(
+        result['message']?.toString() ?? 'Gagal mengambil data cuti.',
+      );
+    }
+
+    return result['data'] as Map<String, dynamic>;
   }
 
   static Future<void> sendFcmTokenToServer() async {
