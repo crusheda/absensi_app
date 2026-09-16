@@ -8,13 +8,11 @@ plugins {
 android {
     namespace 'com.sakudewa.absensi'
     compileSdkVersion 37
-    // compileSdkVersion flutter.compileSdkVersion
-    // ndkVersion '27.0.12077973'
     ndkVersion '28.1.13356709'
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
         coreLibraryDesugaringEnabled true
     }
 
@@ -25,15 +23,13 @@ android {
     }
     
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     defaultConfig {
         applicationId 'com.sakudewa.absensi'
         minSdkVersion flutter.minSdkVersion
-        // minSdkVersion flutter.minSdkVersion
         targetSdkVersion 37
-        // targetSdkVersion flutter.targetSdkVersion
         versionCode flutter.versionCode
         versionName flutter.versionName
     }

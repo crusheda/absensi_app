@@ -15,14 +15,14 @@ import '../models/berita.dart';
 class ApiService {
   // Ganti sesuai URL API Laravel kamu
 
-  static const String baseUrl = "https://absensi.simrsmu.com/api";
-  // static const String baseUrl = "http://172.16.1.36:8000/api";
+  // static const String baseUrl = "https://absensi.simrsmu.com/api";
+  static const String baseUrl = "http://172.16.1.36:8000/api";
 
-  static const String simrsUrl = "https://simrsmu.com";
-  // static const String simrsUrl = "http://172.16.1.36:8001";
+  // static const String simrsUrl = "https://simrsmu.com";
+  static const String simrsUrl = "http://172.16.1.36:8001";
 
-  static const String simrsUrlApi = "https://simrsmu.com/api";
-  // static const String simrsUrlApi = "http://172.16.1.36:8001/api";
+  // static const String simrsUrlApi = "https://simrsmu.com/api";
+  static const String simrsUrlApi = "http://172.16.1.36:8001/api";
 
   static Future<LatLng> getLokasiKantor() async {
     final response = await http.get(Uri.parse('$baseUrl/lokasi-kantor'));
