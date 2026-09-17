@@ -308,18 +308,31 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
     if (parts.length < 2) {
       return Container(
         color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF3F4F6),
-        child: const Center(child: Icon(CupertinoIcons.map)),
+        child: Center(
+          child: Icon(
+            CupertinoIcons.map,
+            color: isDark
+                ? CupertinoColors.systemGrey
+                : CupertinoColors.systemGrey2,
+          ),
+        ),
       );
     }
 
     final lat = double.tryParse(parts[0].trim());
-
     final lon = double.tryParse(parts[1].trim());
 
     if (lat == null || lon == null) {
       return Container(
         color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF3F4F6),
-        child: const Center(child: Icon(CupertinoIcons.map)),
+        child: Center(
+          child: Icon(
+            CupertinoIcons.map,
+            color: isDark
+                ? CupertinoColors.systemGrey
+                : CupertinoColors.systemGrey2,
+          ),
+        ),
       );
     }
 
@@ -332,11 +345,64 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
         ),
       ),
       children: [
-        TileLayer(
-          urlTemplate:
-              'https://api.maptiler.com/maps/streets/{z}/{x}/{y}.png?key=IB6iMrip0bVW8LFGT5Hs',
-          userAgentPackageName: 'com.sakudewa.absensi',
+        // ============================================================
+        // OPENSTREETMAP
+        // ============================================================
+        ColorFiltered(
+          colorFilter: isDark
+              ? const ColorFilter.matrix([
+                  -1,
+                  0,
+                  0,
+                  0,
+                  255,
+                  0,
+                  -1,
+                  0,
+                  0,
+                  255,
+                  0,
+                  0,
+                  -1,
+                  0,
+                  255,
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
+                ])
+              : const ColorFilter.matrix([
+                  1,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
+                ]),
+          child: TileLayer(
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            userAgentPackageName: 'com.sakudewa.absensi',
+          ),
         ),
+
+        // ============================================================
+        // MARKER LOKASI ABSENSI
+        // ============================================================
         MarkerLayer(
           markers: [
             Marker(
@@ -938,13 +1004,38 @@ class _DetailRekapAbsensiPageState extends State<DetailRekapAbsensiPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const CupertinoActivityIndicator(radius: 14),
-          const SizedBox(height: 10),
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              color: isDark
+                  ? CupertinoColors.white.withOpacity(0.07)
+                  : CupertinoColors.white.withOpacity(0.90),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: isDark
+                    ? CupertinoColors.white.withOpacity(0.08)
+                    : CupertinoColors.white.withOpacity(0.95),
+              ),
+            ),
+            child: Center(
+              child: CupertinoActivityIndicator(
+                radius: 13,
+                color: isDark
+                    ? CupertinoColors.white
+                    : CupertinoColors.systemGrey,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
           Text(
             'Memuat detail absensi...',
             style: TextStyle(
               fontFamily: 'Poppins',
               fontSize: 10.5,
+              fontWeight: FontWeight.w500,
               color: isDark
                   ? CupertinoColors.systemGrey2
                   : CupertinoColors.systemGrey,

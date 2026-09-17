@@ -13,7 +13,9 @@ class AbsensiNotifikasiService {
 
     try {
       print('[REMINDER] Memanggil API $url...');
+
       final response = await http.get(url);
+
       print('[REMINDER] Status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
@@ -21,7 +23,9 @@ class AbsensiNotifikasiService {
 
         // Parse jam masuk dari API
         final jamMasuk = DateTime.parse("${data['tanggal']} ${data['push']}");
+
         final scheduledTime = tz.TZDateTime.from(jamMasuk, tz.local);
+
         final now = tz.TZDateTime.now(tz.local);
 
         print("[REMINDER] Sekarang: $now");
@@ -36,32 +40,52 @@ class AbsensiNotifikasiService {
           ticker: 'ticker',
         );
 
-        // Tampilkan langsung jika waktunya sudah lewat
+        const notificationDetails = NotificationDetails(
+          android: androidDetails,
+        );
+
+        // ============================================================
+        // WAKTU SUDAH LEWAT
+        // ============================================================
         if (scheduledTime.isBefore(now) ||
             scheduledTime.isAtSameMomentAs(now)) {
-          print("[REMINDER] Waktu notifikasi sudah lewat, tampilkan langsung.");
+          print(
+            "[REMINDER] Waktu notifikasi sudah lewat, "
+            "tampilkan langsung.",
+          );
+
           await _plugin.show(
-            0,
-            'Pengingat Absensi',
-            'Jaga ${data['shift']} akan dimulai.\nAbsen Masuk pukul ${data['jam']}!',
-            const NotificationDetails(android: androidDetails),
+            id: 0,
+            title: 'Pengingat Absensi',
+            body:
+                'Jaga ${data['shift']} akan dimulai.\n'
+                'Absen Masuk pukul ${data['jam']}!',
+            notificationDetails: notificationDetails,
           );
-        } else {
+        }
+        // ============================================================
+        // WAKTU MASIH DI MASA DEPAN
+        // ============================================================
+        else {
           print("[REMINDER] Jadwalkan notifikasi di masa depan.");
+
           await _plugin.zonedSchedule(
-            0,
-            'Pengingat Absensi',
-            'Jaga ${data['shift']} akan dimulai 1 jam lagi.\nAbsen Masuk pukul ${data['jam']}!',
-            scheduledTime,
-            const NotificationDetails(android: androidDetails),
+            id: 0,
+            title: 'Pengingat Absensi',
+            body:
+                'Jaga ${data['shift']} akan dimulai 1 jam lagi.\n'
+                'Absen Masuk pukul ${data['jam']}!',
+            scheduledDate: scheduledTime,
+            notificationDetails: notificationDetails,
             androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-            // Hapus uiLocalNotificationDateInterpretation
           );
+
           print("[REMINDER] Notifikasi berhasil dijadwalkan!");
         }
       } else {
         print(
-          "[REMINDER] Gagal memuat data shift. Status: ${response.statusCode}",
+          "[REMINDER] Gagal memuat data shift. "
+          "Status: ${response.statusCode}",
         );
       }
     } catch (e) {

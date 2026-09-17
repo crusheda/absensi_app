@@ -46,8 +46,9 @@ class RiwayatModel {
 
 class RekapPage extends StatefulWidget {
   final int id_user;
+  final int refreshKey;
 
-  const RekapPage({super.key, required this.id_user});
+  const RekapPage({super.key, required this.id_user, this.refreshKey = 0});
 
   @override
   State<RekapPage> createState() => _RekapPageState();
@@ -56,6 +57,7 @@ class RekapPage extends StatefulWidget {
 class _RekapPageState extends State<RekapPage> {
   bool isError = false;
   bool isLoading = true;
+  bool isRefreshing = false;
 
   String selectedFilter = '1';
 
@@ -68,6 +70,7 @@ class _RekapPageState extends State<RekapPage> {
   late final ScrollController _scrollController;
 
   bool showBackToTopButton = false;
+  int? _openingDetailId;
 
   late Map<String, String> filterOptions;
 
@@ -87,6 +90,15 @@ class _RekapPageState extends State<RekapPage> {
     _scrollController.addListener(_handleScroll);
 
     fetchRiwayat();
+  }
+
+  @override
+  void didUpdateWidget(covariant RekapPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.refreshKey != widget.refreshKey) {
+      fetchRiwayat(isManualRefresh: false);
+    }
   }
 
   @override
@@ -144,13 +156,17 @@ class _RekapPageState extends State<RekapPage> {
     return options;
   }
 
-  Future<void> fetchRiwayat() async {
+  Future<void> fetchRiwayat({bool isManualRefresh = false}) async {
     if (!mounted) {
       return;
     }
 
     setState(() {
-      isLoading = true;
+      if (isManualRefresh) {
+        isRefreshing = true;
+      } else {
+        isLoading = true;
+      }
     });
 
     final url =
@@ -215,6 +231,7 @@ class _RekapPageState extends State<RekapPage> {
 
       setState(() {
         isLoading = false;
+        isRefreshing = false;
       });
     }
   }
@@ -311,16 +328,34 @@ class _RekapPageState extends State<RekapPage> {
               ],
             ),
           ),
-          _buildHeaderIcon(
-            isDark: isDark,
-            icon: CupertinoIcons.chart_bar_alt_fill,
+
+          const SizedBox(width: 8),
+
+          // ============================================================
+          // REFRESH BUTTON
+          // ============================================================
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            minSize: 0,
+            onPressed: isRefreshing
+                ? null
+                : () => fetchRiwayat(isManualRefresh: true),
+            child: _buildHeaderIcon(
+              isDark: isDark,
+              icon: CupertinoIcons.refresh,
+              loading: isRefreshing,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHeaderIcon({required bool isDark, required IconData icon}) {
+  Widget _buildHeaderIcon({
+    required bool isDark,
+    required IconData icon,
+    bool loading = false,
+  }) {
     return Container(
       width: 44,
       height: 44,
@@ -336,11 +371,15 @@ class _RekapPageState extends State<RekapPage> {
           width: 1,
         ),
       ),
-      child: Icon(
-        icon,
-        size: 21,
-        color: isDark ? CupertinoColors.systemBlue : const Color(0xFF2563EB),
-      ),
+      child: loading
+          ? const CupertinoActivityIndicator(radius: 9)
+          : Icon(
+              icon,
+              size: 21,
+              color: isDark
+                  ? CupertinoColors.systemBlue
+                  : const Color(0xFF2563EB),
+            ),
     );
   }
 
@@ -675,6 +714,9 @@ class _RekapPageState extends State<RekapPage> {
     final iconColor = _getStatusColor(item);
     final label = _getStatusLabel(item);
 
+    final isOpening = _openingDetailId == item.idAbsensi;
+    final isDisabled = _openingDetailId != null;
+
     return Container(
       decoration: BoxDecoration(
         color: isDark
@@ -691,9 +733,11 @@ class _RekapPageState extends State<RekapPage> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         minSize: 0,
         borderRadius: BorderRadius.circular(18),
-        onPressed: () {
-          _openDetail(item);
-        },
+        onPressed: isDisabled
+            ? null
+            : () {
+                _openDetail(item);
+              },
         child: Row(
           children: [
             Container(
@@ -739,12 +783,23 @@ class _RekapPageState extends State<RekapPage> {
               ),
             ),
             const SizedBox(width: 8),
-            Icon(
-              CupertinoIcons.chevron_right,
-              size: 16,
-              color: isDark
-                  ? CupertinoColors.systemGrey
-                  : CupertinoColors.systemGrey2,
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: isOpening
+                  ? CupertinoActivityIndicator(
+                      radius: 8,
+                      color: isDark
+                          ? CupertinoColors.white
+                          : CupertinoColors.systemBlue,
+                    )
+                  : Icon(
+                      CupertinoIcons.chevron_right,
+                      size: 16,
+                      color: isDark
+                          ? CupertinoColors.systemGrey
+                          : CupertinoColors.systemGrey2,
+                    ),
             ),
           ],
         ),
@@ -753,27 +808,13 @@ class _RekapPageState extends State<RekapPage> {
   }
 
   Future<void> _openDetail(RiwayatModel item) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) {
-        final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+    if (_openingDetailId != null) {
+      return;
+    }
 
-        return Center(
-          child: Container(
-            width: 68,
-            height: 68,
-            decoration: BoxDecoration(
-              color: isDark
-                  ? CupertinoColors.systemGrey6
-                  : CupertinoColors.white,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: const CupertinoActivityIndicator(radius: 12),
-          ),
-        );
-      },
-    );
+    setState(() {
+      _openingDetailId = item.idAbsensi;
+    });
 
     await Future.delayed(const Duration(milliseconds: 300));
 
@@ -781,13 +822,19 @@ class _RekapPageState extends State<RekapPage> {
       return;
     }
 
-    Navigator.of(context).pop();
-
     await Navigator.of(context).push(
       CupertinoPageRoute(
         builder: (_) => DetailRekapAbsensiPage(idAbsensi: item.idAbsensi),
       ),
     );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _openingDetailId = null;
+    });
   }
 
   Widget _buildEmptyState(bool isDark) {

@@ -87,7 +87,7 @@ class _SettingPageState extends State<SettingPage> {
       iOS: iosSettings,
     );
 
-    await flutterLocalNotificationsPlugin.initialize(settings);
+    await flutterLocalNotificationsPlugin.initialize(settings: settings);
   }
 
   Future<void> _requestNotificationPermission() async {
@@ -147,10 +147,11 @@ class _SettingPageState extends State<SettingPage> {
     );
 
     await flutterLocalNotificationsPlugin.show(
-      0,
-      'Tes Notifikasi Informasi E-Absensi',
-      'Ini adalah contoh notifikasi dari Aplikasi E-Absensi. Jangan lupa absensi ya :)',
-      notificationDetails,
+      id: 0,
+      title: 'Tes Notifikasi Informasi E-Absensi',
+      body:
+          'Ini adalah contoh notifikasi dari Aplikasi E-Absensi. Jangan lupa absensi ya :)',
+      notificationDetails: notificationDetails,
     );
   }
 

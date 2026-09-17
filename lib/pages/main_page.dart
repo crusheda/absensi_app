@@ -33,6 +33,7 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   int currentIndex = 0;
+  int rekapRefreshKey = 0;
 
   @override
   void initState() {
@@ -45,6 +46,14 @@ class _MainPageState extends State<MainPage> {
 
       _changeTab(index);
     };
+  }
+
+  void _onAbsensiBerhasil() {
+    if (!mounted) return;
+
+    setState(() {
+      rekapRefreshKey++;
+    });
   }
 
   @override
@@ -88,9 +97,13 @@ class _MainPageState extends State<MainPage> {
 
       JadwalPage(id_user: widget.id_user),
 
-      AbsensiPage(id_user: widget.id_user, nip: widget.nip),
+      AbsensiPage(
+        id_user: widget.id_user,
+        nip: widget.nip,
+        onAbsensiBerhasil: _onAbsensiBerhasil,
+      ),
 
-      RekapPage(id_user: widget.id_user),
+      RekapPage(id_user: widget.id_user, refreshKey: rekapRefreshKey),
 
       SettingPage(
         id_user: widget.id_user,

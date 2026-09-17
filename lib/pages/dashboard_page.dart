@@ -386,7 +386,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 ],
                 // const SizedBox(height: 12),
                 // _buildSectionTitle("Menu Cepat", null, isDark),
-                const SizedBox(height: 7),
+                const SizedBox(height: 12),
                 _buildQuickActions(context, isDark),
                 if (berita.isNotEmpty || isLoadingBerita) ...[
                   const SizedBox(height: 14),
@@ -512,7 +512,7 @@ class _DashboardPageState extends State<DashboardPage> {
           const CupertinoActivityIndicator(radius: 7),
           const SizedBox(width: 8),
           Text(
-            "Memuat dashboard...",
+            "Memuat API System...",
             style: TextStyle(
               fontSize: 10,
               color: isDark ? Colors.white70 : const Color(0xFF667386),

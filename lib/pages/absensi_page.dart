@@ -26,8 +26,14 @@ import 'custom_camera_ios.dart';
 class AbsensiPage extends StatefulWidget {
   final int id_user;
   final String nip;
+  final VoidCallback? onAbsensiBerhasil;
 
-  const AbsensiPage({super.key, required this.nip, required this.id_user});
+  const AbsensiPage({
+    super.key,
+    required this.nip,
+    required this.id_user,
+    this.onAbsensiBerhasil,
+  });
 
   @override
   State<AbsensiPage> createState() => _AbsensiPageState();
@@ -470,7 +476,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
     final initSettings = InitializationSettings(android: androidInit);
 
     await flutterLocalNotificationsPlugin.initialize(
-      initSettings,
+      settings: initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         if (response.payload == 'open_location_settings' ||
             response.payload == 'open_camera_settings') {
@@ -557,10 +563,11 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
 
   Future<void> _tampilkanNotifikasiLokasiGagal() async {
     await flutterLocalNotificationsPlugin.show(
-      0,
-      'Perhatian! Perizinan Lokasi Gagal',
-      'Aktifkan izin lokasi / GPS pada device Anda agar dapat melakukan absensi.',
-      const NotificationDetails(
+      id: 0,
+      title: 'Perhatian! Perizinan Lokasi Gagal',
+      body:
+          'Aktifkan izin lokasi / GPS pada device Anda agar dapat melakukan absensi.',
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           'notif_lokasi_absensi',
           'Peringatan Lokasi',
@@ -575,10 +582,10 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
 
   Future<void> _tampilkanNotifikasiIzinKamera() async {
     await flutterLocalNotificationsPlugin.show(
-      2,
-      'Perhatian! Perizinan Kamera Ditolak',
-      'Aktifkan izin kamera agar bisa mengambil foto saat absensi.',
-      const NotificationDetails(
+      id: 2,
+      title: 'Perhatian! Perizinan Kamera Ditolak',
+      body: 'Aktifkan izin kamera agar bisa mengambil foto saat absensi.',
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           'notif_kamera_absensi',
           'Peringatan Kamera',
@@ -593,10 +600,11 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
 
   Future<void> _tampilkanNotifikasiFakeGps() async {
     await flutterLocalNotificationsPlugin.show(
-      1,
-      'STOP KECURANGAN! Anda terdeteksi menggunakan Lokasi Palsu!',
-      'Aplikasi mendeteksi bahwa Anda menggunakan/mengatur lokasi dari aplikasi Fake GPS atau sejenisnya. Dilarang mengaktifkan aplikasi tersebut atau Anda siap menerima Risiko sesuai kebijakan yang telah ditentukan oleh bagian SDI.',
-      const NotificationDetails(
+      id: 1,
+      title: 'STOP KECURANGAN! Anda terdeteksi menggunakan Lokasi Palsu!',
+      body:
+          'Aplikasi mendeteksi bahwa Anda menggunakan/mengatur lokasi dari aplikasi Fake GPS atau sejenisnya. Dilarang mengaktifkan aplikasi tersebut atau Anda siap menerima Risiko sesuai kebijakan yang telah ditentukan oleh bagian SDI.',
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           'notif_fakegps_absensi',
           'Deteksi Fake GPS',
@@ -1124,10 +1132,11 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
         Navigator.pop(context);
 
         flutterLocalNotificationsPlugin.show(
-          0,
-          'Absensi Gagal!',
-          'Proses absensi lebih dari 30 detik. Silakan periksa koneksi jaringan Anda dan coba lagi.',
-          const NotificationDetails(
+          id: 0,
+          title: 'Absensi Gagal!',
+          body:
+              'Proses absensi lebih dari 30 detik. Silakan periksa koneksi jaringan Anda dan coba lagi.',
+          notificationDetails: NotificationDetails(
             android: AndroidNotificationDetails(
               'notif_absensi',
               'Notifikasi E-Absensi',
@@ -1176,11 +1185,19 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
       isCompleted = true;
 
       if (result['code'] == 200) {
+        // ============================================================
+        // ABSENSI BERHASIL
+        // ============================================================
+
+        // Beritahu MainPage bahwa absensi berhasil.
+        // MainPage kemudian akan memicu refresh RekapPage.
+        widget.onAbsensiBerhasil?.call();
+
         await flutterLocalNotificationsPlugin.show(
-          0,
-          'Yeayy!! Kamu Berhasil!',
-          result['message'],
-          const NotificationDetails(
+          id: 0,
+          title: result['title'] ?? 'Yeayy!! Kamu Berhasil!',
+          body: result['message'] ?? '',
+          notificationDetails: NotificationDetails(
             android: AndroidNotificationDetails(
               'notif_absensi',
               'Notifikasi E-Absensi',
@@ -1192,10 +1209,11 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
         );
       } else if (result['code'] == 401) {
         await flutterLocalNotificationsPlugin.show(
-          0,
-          'Maaf, Gagal Terhubung ke Server!',
-          'Tidak dapat mengirim data absensi. Pastikan koneksi jaringan aktif dan stabil lalu silakan mengulangi Absensi kembali.',
-          const NotificationDetails(
+          id: 0,
+          title: 'Maaf, Gagal Terhubung ke Server!',
+          body:
+              'Tidak dapat mengirim data absensi. Pastikan koneksi jaringan aktif dan stabil lalu silakan mengulangi Absensi kembali.',
+          notificationDetails: NotificationDetails(
             android: AndroidNotificationDetails(
               'notif_absensi',
               'Notifikasi E-Absensi',
@@ -1217,10 +1235,10 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
         );
       } else {
         await flutterLocalNotificationsPlugin.show(
-          0,
-          'Ahh Maaf!! Kode Error ${result['code']}!',
-          result['message'],
-          const NotificationDetails(
+          id: 0,
+          title: result['title'] ?? 'Ahh Maaf!! Kode Error ${result['code']}!',
+          body: result['message'] ?? '',
+          notificationDetails: NotificationDetails(
             android: AndroidNotificationDetails(
               'notif_absensi',
               'Notifikasi E-Absensi',
@@ -1234,8 +1252,8 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
         showCupertinoDialog(
           context: context,
           builder: (_) => _ErrorGlassDialog(
-            title: 'Gagal Absensi - Code ${result['code']}',
-            message: result['message'],
+            title: result['title'] ?? 'Gagal Absensi - Code ${result['code']}',
+            message: result['message'] ?? '',
             buttonText: 'Tutup',
           ),
         );
@@ -1338,9 +1356,60 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
                 ),
               ),
               children: [
-                TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.sakudewa.absensi',
+                // =========================
+                // OPENSTREETMAP
+                // =========================
+                ColorFiltered(
+                  colorFilter: isDark
+                      ? const ColorFilter.matrix([
+                          -1,
+                          0,
+                          0,
+                          0,
+                          255,
+                          0,
+                          -1,
+                          0,
+                          0,
+                          255,
+                          0,
+                          0,
+                          -1,
+                          0,
+                          255,
+                          0,
+                          0,
+                          0,
+                          1,
+                          0,
+                        ])
+                      : const ColorFilter.matrix([
+                          1,
+                          0,
+                          0,
+                          0,
+                          0,
+                          0,
+                          1,
+                          0,
+                          0,
+                          0,
+                          0,
+                          0,
+                          1,
+                          0,
+                          0,
+                          0,
+                          0,
+                          0,
+                          1,
+                          0,
+                        ]),
+                  child: TileLayer(
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.sakudewa.absensi',
+                  ),
                 ),
 
                 // Radius GPS user
