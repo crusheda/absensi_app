@@ -32,7 +32,7 @@ class SettingPage extends StatefulWidget {
   State<SettingPage> createState() => _SettingPageState();
 }
 
-class _SettingPageState extends State<SettingPage> {
+class _SettingPageState extends State<SettingPage> with WidgetsBindingObserver {
   String appVersion = '';
 
   bool notifAllowed = false;
@@ -46,9 +46,26 @@ class _SettingPageState extends State<SettingPage> {
   void initState() {
     super.initState();
 
+    WidgetsBinding.instance.addObserver(this);
+
     _loadAppVersion();
     _checkPermissions();
     _initNotifications();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    if (state == AppLifecycleState.resumed) {
+      _checkPermissions();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   Future<void> _loadAppVersion() async {
@@ -91,7 +108,16 @@ class _SettingPageState extends State<SettingPage> {
   }
 
   Future<void> _requestNotificationPermission() async {
-    final status = await Permission.notification.request();
+    var status = await Permission.notification.status;
+
+    if (status.isPermanentlyDenied) {
+      await openAppSettings();
+      return;
+    }
+
+    if (status.isDenied) {
+      status = await Permission.notification.request();
+    }
 
     if (!mounted) return;
 
@@ -101,7 +127,16 @@ class _SettingPageState extends State<SettingPage> {
   }
 
   Future<void> _requestGpsPermission() async {
-    final status = await Permission.locationWhenInUse.request();
+    var status = await Permission.locationWhenInUse.status;
+
+    if (status.isPermanentlyDenied) {
+      await openAppSettings();
+      return;
+    }
+
+    if (status.isDenied) {
+      status = await Permission.locationWhenInUse.request();
+    }
 
     if (!mounted) return;
 
@@ -111,7 +146,16 @@ class _SettingPageState extends State<SettingPage> {
   }
 
   Future<void> _requestCameraPermission() async {
-    final status = await Permission.camera.request();
+    var status = await Permission.camera.status;
+
+    if (status.isPermanentlyDenied) {
+      await openAppSettings();
+      return;
+    }
+
+    if (status.isDenied) {
+      status = await Permission.camera.request();
+    }
 
     if (!mounted) return;
 
@@ -121,15 +165,56 @@ class _SettingPageState extends State<SettingPage> {
   }
 
   Future<void> _showDummyNotification() async {
-    final status = await Permission.notification.request();
+    final status = await Permission.notification.status;
 
-    if (!mounted) return;
+    if (!status.isGranted) {
+      await showCupertinoDialog(
+        context: context,
+        builder: (dialogContext) {
+          return CupertinoAlertDialog(
+            title: const Text(
+              'Izin Notifikasi Belum Aktif',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            content: const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text(
+                'Aktifkan izin Notifikasi terlebih dahulu melalui Pengaturan Aplikasi.',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            actions: [
+              CupertinoDialogAction(
+                child: const Text(
+                  'Batal',
+                  style: TextStyle(fontFamily: 'Poppins'),
+                ),
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                },
+              ),
+              CupertinoDialogAction(
+                isDefaultAction: true,
+                child: const Text(
+                  'Pengaturan',
+                  style: TextStyle(fontFamily: 'Poppins'),
+                ),
+                onPressed: () async {
+                  Navigator.pop(dialogContext);
+                  await openAppSettings();
+                },
+              ),
+            ],
+          );
+        },
+      );
 
-    setState(() {
-      notifAllowed = status.isGranted;
-    });
-
-    if (!status.isGranted) return;
+      return;
+    }
 
     const androidDetails = AndroidNotificationDetails(
       'dummy_notif_absensi',
@@ -153,6 +238,406 @@ class _SettingPageState extends State<SettingPage> {
           'Ini adalah contoh notifikasi dari Aplikasi E-Absensi. Jangan lupa absensi ya :)',
       notificationDetails: notificationDetails,
     );
+  }
+
+  Future<void> _disableNotificationPermission() async {
+    final result = await showCupertinoDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return CupertinoAlertDialog(
+          title: const Text(
+            'Nonaktifkan Izin Notifikasi?',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: const Padding(
+            padding: EdgeInsets.only(top: 12),
+            child: Text(
+              'Jika izin notifikasi dinonaktifkan, E-Absensi tidak dapat '
+              'mengirimkan notifikasi ke perangkat Anda.\n\n'
+              'Anda dapat mengaktifkan kembali izin notifikasi kapan saja '
+              'melalui Pengaturan perangkat.',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12,
+                height: 1.45,
+              ),
+            ),
+          ),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+              child: const Text(
+                'Batal',
+                style: TextStyle(fontFamily: 'Poppins'),
+              ),
+            ),
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+              child: const Text(
+                'Buka Pengaturan',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == true) {
+      await openAppSettings();
+    }
+  }
+
+  Future<void> _disableLocationPermission() async {
+    final result = await showCupertinoDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return CupertinoAlertDialog(
+          title: const Text(
+            'Nonaktifkan Izin Lokasi?',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: const Padding(
+            padding: EdgeInsets.only(top: 12),
+            child: Text(
+              'Jika izin lokasi dinonaktifkan, E-Absensi tidak dapat '
+              'memverifikasi posisi Anda saat melakukan absensi.\n\n'
+              'Anda dapat mengaktifkan kembali izin lokasi kapan saja '
+              'melalui Pengaturan perangkat.',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12,
+                height: 1.45,
+              ),
+            ),
+          ),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+              child: const Text(
+                'Batal',
+                style: TextStyle(fontFamily: 'Poppins'),
+              ),
+            ),
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+              child: const Text(
+                'Buka Pengaturan',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == true) {
+      await openAppSettings();
+    }
+  }
+
+  Future<void> _disableCameraPermission() async {
+    final result = await showCupertinoDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return CupertinoAlertDialog(
+          title: const Text(
+            'Nonaktifkan Izin Kamera?',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: const Padding(
+            padding: EdgeInsets.only(top: 12),
+            child: Text(
+              'Jika izin kamera dinonaktifkan, E-Absensi tidak dapat '
+              'menggunakan kamera untuk mengambil foto saat proses absensi.\n\n'
+              'Anda dapat mengaktifkan kembali izin kamera kapan saja '
+              'melalui Pengaturan perangkat.',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12,
+                height: 1.45,
+              ),
+            ),
+          ),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+              child: const Text(
+                'Batal',
+                style: TextStyle(fontFamily: 'Poppins'),
+              ),
+            ),
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+              child: const Text(
+                'Buka Pengaturan',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == true) {
+      await openAppSettings();
+    }
+  }
+
+  Future<void> _showNotificationConsent() async {
+    if (!mounted) return;
+
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+
+    final result = await showCupertinoDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return CupertinoAlertDialog(
+          title: const Text(
+            'Persetujuan Notifikasi',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Text(
+              'E-Absensi meminta izin untuk mengirimkan notifikasi '
+              'ke perangkat Anda.\n\n'
+              'Notifikasi digunakan untuk menyampaikan informasi '
+              'yang berkaitan dengan absensi dan layanan aplikasi, '
+              'seperti informasi atau pemberitahuan penting dari '
+              'aplikasi.\n\n'
+              'Izin ini hanya digunakan untuk fungsi notifikasi '
+              'aplikasi. E-Absensi tidak menggunakan izin notifikasi '
+              'untuk mengakses data pribadi lainnya di perangkat Anda.\n\n'
+              'Anda dapat mengubah atau mencabut izin ini kapan saja '
+              'melalui Pengaturan perangkat.',
+              textAlign: TextAlign.left,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 11.5,
+                height: 1.5,
+                color: isDark ? CupertinoColors.white : CupertinoColors.black,
+              ),
+            ),
+          ),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: const Text(
+                'Batal',
+                style: TextStyle(fontFamily: 'Poppins'),
+              ),
+            ),
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              child: const Text(
+                'Setuju',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == true) {
+      await _requestNotificationPermission();
+    }
+  }
+
+  Future<void> _showLocationConsent() async {
+    if (!mounted) return;
+
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+
+    final result = await showCupertinoDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return CupertinoAlertDialog(
+          title: const Text(
+            'Persetujuan Akses Lokasi',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Text(
+              'E-Absensi meminta izin untuk mengakses lokasi '
+              'perangkat Anda saat fitur absensi digunakan.\n\n'
+              'Lokasi digunakan untuk memverifikasi bahwa posisi '
+              'Anda berada dalam radius lokasi yang telah ditentukan '
+              'oleh instansi saat melakukan absensi.\n\n'
+              'Informasi lokasi digunakan untuk keperluan validasi '
+              'absensi dan tidak digunakan untuk mengakses foto, '
+              'kontak, pesan, atau data pribadi lainnya di perangkat '
+              'Anda.\n\n'
+              'Izin lokasi yang diminta adalah izin saat aplikasi '
+              'digunakan. Anda dapat mengubah atau mencabut izin ini '
+              'kapan saja melalui Pengaturan perangkat.',
+              textAlign: TextAlign.left,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 11.5,
+                height: 1.5,
+                color: isDark ? CupertinoColors.white : CupertinoColors.black,
+              ),
+            ),
+          ),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: const Text(
+                'Batal',
+                style: TextStyle(fontFamily: 'Poppins'),
+              ),
+            ),
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              child: const Text(
+                'Setuju',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == true) {
+      await _requestGpsPermission();
+    }
+  }
+
+  Future<void> _showCameraConsent() async {
+    if (!mounted) return;
+
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+
+    final result = await showCupertinoDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return CupertinoAlertDialog(
+          title: const Text(
+            'Persetujuan Akses Kamera',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Text(
+              'E-Absensi meminta izin untuk menggunakan kamera '
+              'perangkat Anda.\n\n'
+              'Kamera digunakan untuk mengambil foto atau selfie '
+              'sebagai bagian dari proses absensi sesuai dengan '
+              'ketentuan yang berlaku pada aplikasi.\n\n'
+              'Kamera hanya digunakan ketika Anda menjalankan fitur '
+              'yang membutuhkan pengambilan foto. E-Absensi tidak '
+              'menggunakan kamera untuk mengambil gambar secara '
+              'diam-diam atau tanpa tindakan dari Anda.\n\n'
+              'Anda dapat mengubah atau mencabut izin kamera kapan '
+              'saja melalui Pengaturan perangkat.',
+              textAlign: TextAlign.left,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 11.5,
+                height: 1.5,
+                color: isDark ? CupertinoColors.white : CupertinoColors.black,
+              ),
+            ),
+          ),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: const Text(
+                'Batal',
+                style: TextStyle(fontFamily: 'Poppins'),
+              ),
+            ),
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              child: const Text(
+                'Setuju',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == true) {
+      await _requestCameraPermission();
+    }
   }
 
   Future<void> _showTentangAplikasi() async {
@@ -569,9 +1054,13 @@ class _SettingPageState extends State<SettingPage> {
                               : 'Izin belum diberikan',
                           trailing: CupertinoSwitch(
                             value: notifAllowed,
-                            onChanged: notifAllowed
-                                ? null
-                                : (_) => _requestNotificationPermission(),
+                            onChanged: (value) async {
+                              if (value) {
+                                await _showNotificationConsent();
+                              } else {
+                                await _disableNotificationPermission();
+                              }
+                            },
                           ),
                         ),
 
@@ -585,9 +1074,13 @@ class _SettingPageState extends State<SettingPage> {
                               : 'Izin belum diberikan',
                           trailing: CupertinoSwitch(
                             value: gpsAllowed,
-                            onChanged: gpsAllowed
-                                ? null
-                                : (_) => _requestGpsPermission(),
+                            onChanged: (value) async {
+                              if (value) {
+                                await _showLocationConsent();
+                              } else {
+                                await _disableLocationPermission();
+                              }
+                            },
                           ),
                         ),
 
@@ -601,9 +1094,13 @@ class _SettingPageState extends State<SettingPage> {
                               : 'Izin belum diberikan',
                           trailing: CupertinoSwitch(
                             value: cameraAllowed,
-                            onChanged: cameraAllowed
-                                ? null
-                                : (_) => _requestCameraPermission(),
+                            onChanged: (value) async {
+                              if (value) {
+                                await _showCameraConsent();
+                              } else {
+                                await _disableCameraPermission();
+                              }
+                            },
                           ),
                         ),
                       ],

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -27,12 +28,14 @@ class AbsensiPage extends StatefulWidget {
   final int id_user;
   final String nip;
   final VoidCallback? onAbsensiBerhasil;
+  final bool isActive;
 
   const AbsensiPage({
     super.key,
     required this.nip,
     required this.id_user,
     this.onAbsensiBerhasil,
+    this.isActive = false,
   });
 
   @override
@@ -55,7 +58,6 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
   bool isTombolAktif = false;
   bool _sudahValidasiAwal = false;
   bool? _lastInsideRadius;
-  bool _alreadyInitialized = false;
 
   bool aktifBerangkat = false;
   bool aktifPulang = false;
@@ -87,10 +89,24 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
 
     WidgetsBinding.instance.addObserver(this);
 
-    _initializeAsync();
     _updateTime();
 
     _timer = Timer.periodic(const Duration(seconds: 1), (_) => _updateTime());
+  }
+
+  @override
+  @override
+  void didUpdateWidget(covariant AbsensiPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // User baru masuk ke tab Absensi
+    if (!oldWidget.isActive && widget.isActive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+
+        await _cekIzinDanRefreshLocation();
+      });
+    }
   }
 
   void _updateTime() {
@@ -130,7 +146,6 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
   // ============================================================
   // LOCATION
   // ============================================================
-
   void _startLocationStream() async {
     LocationPermission permission = await Geolocator.checkPermission();
 
@@ -138,27 +153,50 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
 
     _sedangAmbilLokasi = true;
 
+    // ============================================================
+    // JANGAN request permission di sini.
+    //
+    // Permission sudah harus diberikan melalui disclosure
+    // di MainPage terlebih dahulu.
+    // ============================================================
+
     if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
+      debugPrint(
+        'Izin lokasi belum diberikan. '
+        'Tidak meminta permission secara otomatis.',
+      );
 
-    if (permission == LocationPermission.deniedForever ||
-        permission == LocationPermission.denied) {
-      if (!mounted) return;
-
-      setState(() {
-        _izinLokasiDitolak = true;
-        _position = null;
-      });
-
-      if (!_notifikasiSudahDikirim) {
-        _notifikasiSudahDikirim = true;
-        _tampilkanNotifikasiLokasiGagal();
+      if (mounted) {
+        setState(() {
+          _izinLokasiDitolak = true;
+          _position = null;
+        });
       }
 
       _sedangAmbilLokasi = false;
       return;
     }
+
+    if (permission == LocationPermission.deniedForever) {
+      if (mounted) {
+        setState(() {
+          _izinLokasiDitolak = true;
+          _position = null;
+        });
+
+        if (!_notifikasiSudahDikirim) {
+          _notifikasiSudahDikirim = true;
+          _tampilkanNotifikasiLokasiGagal();
+        }
+      }
+
+      _sedangAmbilLokasi = false;
+      return;
+    }
+
+    // ============================================================
+    // PERMISSION SUDAH DIBERIKAN
+    // ============================================================
 
     if (mounted) {
       setState(() {
@@ -195,11 +233,16 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
       debugPrint("Gagal mendapatkan posisi awal: $e");
     }
 
+    // ============================================================
+    // VALIDASI AWAL
+    // ============================================================
+
     if (!_sedangSubmitAbsensi && !_sudahValidasiAwal && _position != null) {
       _sudahValidasiAwal = true;
 
       if (lokasiAbsensi == null) {
         debugPrint('lokasiAbsensi null, tidak bisa hitung jarak');
+
         _sedangAmbilLokasi = false;
         return;
       }
@@ -270,6 +313,10 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
       }
     }
 
+    // ============================================================
+    // LOCATION STREAM
+    // ============================================================
+
     DateTime? lastValidation;
 
     _positionStream =
@@ -288,13 +335,16 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
 
           if (_position != null && lokasiAbsensi != null) {
             final now = DateTime.now();
+
             final jarakSekarang = Geolocator.distanceBetween(
               pos.latitude,
               pos.longitude,
               lokasiAbsensi!.latitude,
               lokasiAbsensi!.longitude,
             );
+
             final insideSekarang = jarakSekarang <= radiusKantorMeter;
+
             final radiusBerubah =
                 _lastInsideRadius != null &&
                 insideSekarang != _lastInsideRadius;
@@ -324,6 +374,57 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
     _sedangAmbilLokasi = false;
   }
 
+  void _tampilkanNotifikasiIzinLokasi() {
+    if (!mounted) return;
+
+    showCupertinoDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return CupertinoAlertDialog(
+          title: const Text(
+            'Izin Lokasi Belum Aktif',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: const Padding(
+            padding: EdgeInsets.only(top: 12),
+            child: Text(
+              'Izin lokasi belum diberikan untuk aplikasi E-Absensi.\n\n'
+              'Izin lokasi diperlukan untuk memverifikasi posisi Anda '
+              'saat melakukan absensi dan memastikan Anda berada dalam '
+              'radius lokasi yang telah ditentukan oleh instansi.\n\n'
+              'Silakan buka menu Pengaturan pada aplikasi E-Absensi '
+              'untuk mengaktifkan izin lokasi.',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12,
+                height: 1.45,
+              ),
+            ),
+          ),
+          actions: [
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                'Mengerti',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   double _calculateJarak() {
     if (_position == null ||
         (_position!.latitude == 0 && _position!.longitude == 0) ||
@@ -339,12 +440,54 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
     );
   }
 
-  Future<void> _refreshLocation() async {
-    debugPrint('Tombol Refresh Lokasi Atas ditekan');
+  Future<void> _cekIzinLokasi() async {
+    final status = await Permission.locationWhenInUse.status;
+
+    if (!mounted) return;
+
+    if (!status.isGranted) {
+      _tampilkanNotifikasiIzinLokasi();
+    }
+  }
+
+  Future<void> _cekIzinLokasiSaatResume() async {
+    final status = await Permission.locationWhenInUse.status;
+
+    if (!mounted) return;
+
+    if (!status.isGranted) {
+      setState(() {
+        _izinLokasiDitolak = true;
+        _position = null;
+      });
+
+      // Hanya tampilkan informasi/disclosure.
+      // TIDAK request permission Android.
+      _tampilkanNotifikasiIzinLokasi();
+
+      return;
+    }
+
+    setState(() {
+      _izinLokasiDitolak = false;
+    });
+
+    await _refreshLocation();
+  }
+
+  Future<void> _refreshLocation({bool force = false}) async {
+    debugPrint(
+      force ? 'Refresh lokasi otomatis' : 'Tombol Refresh Lokasi Atas ditekan',
+    );
 
     final now = DateTime.now();
 
-    if (_lastRefreshLocation != null) {
+    // ============================================================
+    // COOLDOWN
+    // Hanya berlaku untuk refresh manual.
+    // Refresh otomatis menggunakan force: true.
+    // ============================================================
+    if (!force && _lastRefreshLocation != null) {
       final elapsed = now.difference(_lastRefreshLocation!);
 
       if (elapsed < _refreshCooldown) {
@@ -353,7 +496,8 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
         if (mounted) {
           _showAlert(
             'Silakan menunggu..',
-            'Refresh lokasi dapat dilakukan kembali dalam $remaining detik.',
+            'Refresh lokasi dapat dilakukan kembali dalam '
+                '$remaining detik.',
           );
         }
 
@@ -361,23 +505,32 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
       }
     }
 
+    // ============================================================
+    // CEGAH REFRESH GANDA
+    // ============================================================
     if (_isRefreshingLocation) {
+      debugPrint('Refresh lokasi sedang berjalan.');
       return;
     }
 
     _lastRefreshLocation = now;
 
+    // ============================================================
+    // CEK PERMISSION
+    // TIDAK REQUEST PERMISSION DI SINI
+    // ============================================================
     final permission = await Geolocator.checkPermission();
 
-    if (permission == LocationPermission.deniedForever ||
-        permission == LocationPermission.denied) {
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
       if (mounted) {
         setState(() {
           _izinLokasiDitolak = true;
+          _position = null;
         });
       }
 
-      debugPrint("Izin lokasi tidak diberikan, batal refresh.");
+      debugPrint('Izin lokasi tidak diberikan, batal refresh.');
 
       return;
     }
@@ -385,10 +538,14 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
     if (mounted) {
       setState(() {
         _isRefreshingLocation = true;
+        _izinLokasiDitolak = false;
       });
     }
 
     try {
+      // ============================================================
+      // AMBIL POSISI TERKINI
+      // ============================================================
       final current = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
@@ -400,24 +557,28 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
         _isMocked = current.isMocked;
       });
 
+      // ============================================================
+      // PINDAHKAN MAP KE POSISI USER
+      // ============================================================
       try {
-        if (_position != null) {
-          mapController.move(
-            LatLng(
-              _position!.latitude - 0.00075,
-              _position!.longitude - 0.00015,
-            ),
-            18.0,
-          );
-        }
+        mapController.move(
+          LatLng(current.latitude - 0.00075, current.longitude - 0.00015),
+          18.0,
+        );
       } catch (e) {
         debugPrint('Gagal memindahkan map: $e');
       }
 
+      // ============================================================
+      // CEK FAKE GPS
+      // ============================================================
       if (_isMocked) {
         _tampilkanNotifikasiFakeGps();
       }
 
+      // ============================================================
+      // AMBIL LOKASI KANTOR
+      // ============================================================
       await _ambilLokasiKantor();
 
       if (lokasiAbsensi != null) {
@@ -429,12 +590,21 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
         );
 
         _lastInsideRadius = jarak <= radiusKantorMeter;
+
         _sudahValidasiAwal = true;
 
+        // ============================================================
+        // VALIDASI TOMBOL ABSENSI
+        // ============================================================
         await _cekValidasiTombol();
 
+        // ============================================================
+        // RESTART LOCATION STREAM
+        // ============================================================
         await _positionStream?.cancel();
+
         _positionStream = null;
+
         _startLocationStream();
       }
     } on SocketException catch (_) {
@@ -442,7 +612,7 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
     } on http.ClientException catch (_) {
       debugPrint('Gagal memvalidasi tombol absensi: _refreshLocation');
     } catch (e) {
-      debugPrint("Gagal refresh lokasi: $e");
+      debugPrint('Gagal refresh lokasi: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -464,6 +634,29 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
     } catch (e) {
       debugPrint("Gagal ambil lokasi kantor: $e");
     }
+  }
+
+  Future<void> _cekIzinDanRefreshLocation() async {
+    final permission = await Permission.locationWhenInUse.status;
+
+    if (!mounted) return;
+
+    if (!permission.isGranted) {
+      setState(() {
+        _izinLokasiDitolak = true;
+        _position = null;
+      });
+
+      _cekIzinLokasi();
+      return;
+    }
+
+    // Izin sudah ada → langsung ambil lokasi
+    setState(() {
+      _izinLokasiDitolak = false;
+    });
+
+    await _refreshLocation();
   }
 
   // ============================================================
@@ -492,30 +685,6 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
         ?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
-  Future<PermissionStatus> _requestNotificationPermission() async {
-    PermissionStatus status = PermissionStatus.denied;
-
-    if (Platform.isAndroid) {
-      status = await Permission.notification.status;
-
-      if (status.isDenied) {
-        status = await Permission.notification.request();
-      }
-    }
-
-    return status;
-  }
-
-  Future<PermissionStatus> _requestLocationPermission() async {
-    PermissionStatus status = await Permission.location.status;
-
-    if (status.isDenied) {
-      status = await Permission.location.request();
-    }
-
-    return status;
-  }
-
   Future<void> _requestCameraPermission() async {
     var status = await Permission.camera.status;
 
@@ -531,34 +700,25 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _initializeAsync() async {
-    if (_alreadyInitialized) return;
+  Future<bool> _checkLocationPermission() async {
+    final status = await Permission.location.status;
 
-    _alreadyInitialized = true;
+    if (status.isGranted) {
+      return true;
+    }
 
-    await _initNotification();
-
-    final notifStatus = await _requestNotificationPermission();
-
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    if (notifStatus.isGranted) {
-      final locationStatus = await _requestLocationPermission();
-
-      if (locationStatus.isGranted) {
-        debugPrint('Lokasi diizinkan');
-      } else {
-        debugPrint('Lokasi ditolak atau dibatalkan');
+    if (status.isPermanentlyDenied) {
+      if (mounted) {
+        _showAlert(
+          'Izin Lokasi Diperlukan',
+          'Aktifkan izin lokasi melalui Pengaturan agar dapat melakukan absensi.',
+        );
       }
-    } else {
-      debugPrint('Notifikasi ditolak, skip izin lokasi');
+
+      return false;
     }
 
-    await _ambilLokasiKantor();
-
-    if (lokasiAbsensi != null) {
-      _startLocationStream();
-    }
+    return false;
   }
 
   Future<void> _tampilkanNotifikasiLokasiGagal() async {
@@ -1297,20 +1457,42 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) async {
-    if (state == AppLifecycleState.resumed) {
-      debugPrint('App resumed, refresh page');
+    if (state != AppLifecycleState.resumed) return;
 
-      if (!_alreadyInitialized) return;
+    // Hanya proses jika tab Absensi sedang aktif
+    if (!widget.isActive) return;
 
-      final permission = await Geolocator.checkPermission();
+    debugPrint('AbsensiPage resumed, cek izin lokasi');
 
-      if (permission != LocationPermission.denied &&
-          permission != LocationPermission.deniedForever) {
-        _refreshLocation();
-      } else {
-        debugPrint("Diblokir: Izin lokasi ditolak, tidak refresh.");
-      }
+    final permission = await Geolocator.checkPermission();
+
+    if (!mounted) return;
+
+    // ============================================================
+    // IZIN LOKASI BELUM DIBERIKAN
+    // ============================================================
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      setState(() {
+        _izinLokasiDitolak = true;
+        _position = null;
+      });
+
+      debugPrint('Izin lokasi belum diberikan setelah app resumed.');
+
+      return;
     }
+
+    // ============================================================
+    // IZIN LOKASI SUDAH DIBERIKAN
+    // ============================================================
+    setState(() {
+      _izinLokasiDitolak = false;
+    });
+
+    debugPrint('Izin lokasi aktif → refresh lokasi otomatis');
+
+    await _refreshLocation(force: true);
   }
 
   // ============================================================
@@ -1330,8 +1512,42 @@ class _AbsensiPageState extends State<AbsensiPage> with WidgetsBindingObserver {
     final insideRadius = distance <= radiusKantorMeter;
 
     final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+    // ============================================================
+    // RESPONSIVE BOTTOM CONTENT
+    // ============================================================
+    //
+    // MainPage menggunakan:
+    //
+    // SafeArea(
+    //   minimum: EdgeInsets.fromLTRB(14, 0, 14, 12),
+    //   child: FloatingLiquidNavigationBar(
+    //     height: 70,
+    //   ),
+    // )
+    //
+    // Karena MainPage menggunakan extendBody: true,
+    // body AbsensiPage dapat berada di belakang bottom navigation.
+    //
+    // Maka kita sisakan:
+    //   1. tinggi navigation bar
+    //   2. bottom inset device / minimum SafeArea
+    //   3. sedikit gap visual
+    //
 
-    const bottomContentPadding = 89.0;
+    final mediaQuery = MediaQuery.of(context);
+
+    final bottomSafeArea = mediaQuery.viewPadding.bottom;
+
+    const navigationBarHeight = 85.0;
+    const navigationBarBottomMargin = 12.0;
+    const gapAboveNavigation = 8.0;
+
+    final bottomContentPadding =
+        navigationBarHeight +
+        math.max(bottomSafeArea, navigationBarBottomMargin) +
+        gapAboveNavigation;
+
+    // const bottomContentPadding = 89.0;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: Colors.transparent,

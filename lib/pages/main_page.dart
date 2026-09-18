@@ -1,8 +1,12 @@
 import 'dart:math' as math;
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
+import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'jadwal_page.dart';
 import 'dashboard_page.dart';
@@ -35,6 +39,8 @@ class _MainPageState extends State<MainPage> {
   int currentIndex = 0;
   int rekapRefreshKey = 0;
 
+  bool _permissionDialogShowing = false;
+
   @override
   void initState() {
     super.initState();
@@ -46,6 +52,10 @@ class _MainPageState extends State<MainPage> {
 
       _changeTab(index);
     };
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showPermissionDisclosureIfNeeded();
+    });
   }
 
   void _onAbsensiBerhasil() {
@@ -84,6 +94,337 @@ class _MainPageState extends State<MainPage> {
     }
   }
 
+  Future<void> _showPermissionDisclosureIfNeeded() async {
+    if (!mounted) return;
+    if (_permissionDialogShowing) return;
+
+    // ============================================================
+    // CEK STATUS SEMUA PERMISSION
+    // ============================================================
+
+    final cameraStatus = await Permission.camera.status;
+    final locationStatus = await Permission.locationWhenInUse.status;
+
+    PermissionStatus notificationStatus = PermissionStatus.granted;
+
+    if (Platform.isAndroid || Platform.isIOS) {
+      notificationStatus = await Permission.notification.status;
+    }
+
+    final cameraGranted = cameraStatus.isGranted;
+    final locationGranted = locationStatus.isGranted;
+    final notificationGranted = notificationStatus.isGranted;
+
+    // ============================================================
+    // JIKA SEMUA SUDAH DIIZINKAN
+    // MAKA TIDAK PERLU MENAMPILKAN DISCLOSURE
+    // ============================================================
+
+    if (cameraGranted && locationGranted && notificationGranted) {
+      return;
+    }
+
+    _permissionDialogShowing = true;
+
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    if (!mounted) {
+      _permissionDialogShowing = false;
+      return;
+    }
+
+    // ============================================================
+    // DIALOG PROMINENT DISCLOSURE
+    // ============================================================
+
+    final result = await showCupertinoDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        final isDark =
+            CupertinoTheme.brightnessOf(dialogContext) == Brightness.dark;
+
+        return CupertinoAlertDialog(
+          title: const Text(
+            'Izin Aplikasi',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w700,
+              fontSize: 17,
+            ),
+          ),
+
+          content: Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Column(
+              children: [
+                Text(
+                  'E-Absensi memerlukan beberapa izin untuk '
+                  'menjalankan fitur absensi.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    height: 1.45,
+                    color: isDark
+                        ? CupertinoColors.white
+                        : CupertinoColors.black,
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                // ==================================================
+                // STATUS CAMERA
+                // ==================================================
+                _buildPermissionStatusRow(
+                  icon: CupertinoIcons.camera_fill,
+                  title: 'Kamera',
+                  granted: cameraGranted,
+                  isDark: isDark,
+                ),
+
+                const SizedBox(height: 8),
+
+                // ==================================================
+                // STATUS LOCATION
+                // ==================================================
+                _buildPermissionStatusRow(
+                  icon: CupertinoIcons.location_fill,
+                  title: 'Lokasi / GPS',
+                  granted: locationGranted,
+                  isDark: isDark,
+                ),
+
+                const SizedBox(height: 8),
+
+                // ==================================================
+                // STATUS NOTIFICATION
+                // ==================================================
+                _buildPermissionStatusRow(
+                  icon: CupertinoIcons.bell_fill,
+                  title: 'Notifikasi',
+                  granted: notificationGranted,
+                  isDark: isDark,
+                ),
+
+                const SizedBox(height: 14),
+
+                // ==================================================
+                // PENJELASAN PERMISSION
+                // ==================================================
+                Text(
+                  '• Kamera digunakan untuk mengambil foto saat '
+                  'melakukan absensi.\n'
+                  '• Lokasi digunakan untuk memverifikasi posisi '
+                  'Anda saat melakukan absensi.\n'
+                  '• Notifikasi digunakan untuk memberikan informasi '
+                  'terkait absensi dan layanan aplikasi.',
+                  textAlign: TextAlign.left,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 11,
+                    height: 1.5,
+                    color: isDark
+                        ? CupertinoColors.systemGrey2
+                        : CupertinoColors.systemGrey,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                Text(
+                  'Anda dapat memberikan izin sekarang atau '
+                  'mengaktifkannya kemudian melalui Pengaturan.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 10,
+                    height: 1.4,
+                    color: isDark
+                        ? CupertinoColors.systemGrey
+                        : CupertinoColors.systemGrey2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text(
+                'Lewati',
+                style: TextStyle(fontFamily: 'Poppins'),
+              ),
+            ),
+
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              child: const Text(
+                'Setuju',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    _permissionDialogShowing = false;
+
+    if (!mounted) return;
+
+    // ============================================================
+    // USER MEMILIH SETUJU
+    // ============================================================
+
+    if (result == true) {
+      await _requestAllPermissions();
+    }
+
+    // ============================================================
+    // JIKA LEWATI:
+    //
+    // TIDAK ADA FLAG YANG DISIMPAN.
+    //
+    // Karena permission masih belum lengkap, saat aplikasi
+    // dibuka kembali popup akan muncul lagi.
+    // ============================================================
+  }
+
+  Widget _buildPermissionStatusRow({
+    required IconData icon,
+    required String title,
+    required bool granted,
+    required bool isDark,
+  }) {
+    final statusColor = granted
+        ? CupertinoColors.systemGreen
+        : CupertinoColors.systemRed;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1E25) : const Color(0xFFF5F6F8),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, size: 15, color: statusColor),
+          ),
+
+          const SizedBox(width: 10),
+
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: isDark ? CupertinoColors.white : CupertinoColors.black,
+              ),
+            ),
+          ),
+
+          Icon(
+            granted
+                ? CupertinoIcons.checkmark_circle_fill
+                : CupertinoIcons.xmark_circle_fill,
+            size: 17,
+            color: statusColor,
+          ),
+
+          const SizedBox(width: 5),
+
+          Text(
+            granted ? 'Sudah diberikan' : 'Belum diberikan',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 9.5,
+              fontWeight: FontWeight.w500,
+              color: statusColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _requestAllPermissions() async {
+    if (!mounted) return;
+
+    // ============================================================
+    // 1. KAMERA
+    // ============================================================
+
+    var cameraStatus = await Permission.camera.status;
+
+    if (cameraStatus.isDenied) {
+      cameraStatus = await Permission.camera.request();
+    }
+
+    // ============================================================
+    // 2. LOKASI
+    // ============================================================
+
+    var locationStatus = await Permission.locationWhenInUse.status;
+
+    if (locationStatus.isDenied) {
+      locationStatus = await Permission.locationWhenInUse.request();
+    }
+
+    // ============================================================
+    // 3. NOTIFIKASI
+    // ============================================================
+
+    PermissionStatus notificationStatus = PermissionStatus.granted;
+
+    if (Platform.isAndroid || Platform.isIOS) {
+      notificationStatus = await Permission.notification.status;
+
+      if (notificationStatus.isDenied) {
+        notificationStatus = await Permission.notification.request();
+      }
+    }
+
+    // ============================================================
+    // CEK HASIL AKHIR
+    // ============================================================
+
+    final allGranted =
+        cameraStatus.isGranted &&
+        locationStatus.isGranted &&
+        notificationStatus.isGranted;
+
+    debugPrint(
+      '========================================\n'
+      'PERMISSION RESULT\n'
+      'Camera       : $cameraStatus\n'
+      'Location     : $locationStatus\n'
+      'Notification : $notificationStatus\n'
+      'All Granted  : $allGranted\n'
+      '========================================',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = [
@@ -100,6 +441,7 @@ class _MainPageState extends State<MainPage> {
       AbsensiPage(
         id_user: widget.id_user,
         nip: widget.nip,
+        isActive: currentIndex == 2,
         onAbsensiBerhasil: _onAbsensiBerhasil,
       ),
 
